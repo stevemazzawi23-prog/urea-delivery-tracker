@@ -1,48 +1,192 @@
-import { ScrollView, Text, View, TouchableOpacity } from "react-native";
-
+import { useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+  RefreshControl,
+  Platform,
+} from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useColors } from "@/hooks/use-colors";
+import { getClients, deleteClient, type Client } from "@/lib/storage";
 
-/**
- * Home Screen - NativeWind Example
- *
- * This template uses NativeWind (Tailwind CSS for React Native).
- * You can use familiar Tailwind classes directly in className props.
- *
- * Key patterns:
- * - Use `className` instead of `style` for most styling
- * - Theme colors: use tokens directly (bg-background, text-foreground, bg-primary, etc.); no dark: prefix needed
- * - Responsive: standard Tailwind breakpoints work on web
- * - Custom colors defined in tailwind.config.js
- */
-export default function HomeScreen() {
-  return (
-    <ScreenContainer className="p-6">
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="flex-1 gap-8">
-          {/* Hero Section */}
-          <View className="items-center gap-2">
-            <Text className="text-4xl font-bold text-foreground">Welcome</Text>
-            <Text className="text-base text-muted text-center">
-              Edit app/(tabs)/index.tsx to get started
-            </Text>
-          </View>
+export default function ClientsScreen() {
+  const colors = useColors();
+  const router = useRouter();
+  const [clients, setClients] = useState<Client[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
-          {/* Example Card */}
-          <View className="w-full max-w-sm self-center bg-surface rounded-2xl p-6 shadow-sm border border-border">
-            <Text className="text-lg font-semibold text-foreground mb-2">NativeWind Ready</Text>
-            <Text className="text-sm text-muted leading-relaxed">
-              Use Tailwind CSS classes directly in your React Native components.
-            </Text>
-          </View>
+  const loadClients = async () => {
+    const data = await getClients();
+    setClients(data.sort((a, b) => b.createdAt - a.createdAt));
+  };
 
-          {/* Example Button */}
-          <View className="items-center">
-            <TouchableOpacity className="bg-primary px-6 py-3 rounded-full active:opacity-80">
-              <Text className="text-background font-semibold">Get Started</Text>
-            </TouchableOpacity>
-          </View>
+  useFocusEffect(
+    useCallback(() => {
+      loadClients();
+    }, [])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadClients();
+    setRefreshing(false);
+  };
+
+  const handleDeleteClient = (client: Client) => {
+    Alert.alert(
+      "Supprimer le client",
+      `Voulez-vous vraiment supprimer ${client.name}?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            await deleteClient(client.id);
+            await loadClients();
+            if (Platform.OS !== "web") {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleStartDelivery = (client: Client) => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push({
+      pathname: "/delivery/active",
+      params: {
+        clientId: client.id,
+        clientName: client.name,
+        clientCompany: client.company,
+      },
+    });
+  };
+
+  const filteredClients = clients.filter(
+    (client) =>
+      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.phone.includes(searchQuery)
+  );
+
+  const renderClient = ({ item }: { item: Client }) => (
+    <TouchableOpacity
+      onPress={() => handleStartDelivery(item)}
+      onLongPress={() => handleDeleteClient(item)}
+      style={{ opacity: 1 }}
+      activeOpacity={0.7}
+    >
+      <View className="bg-surface rounded-xl p-4 mb-3 border border-border">
+        <View className="flex-row justify-between items-start mb-1">
+          <Text className="text-lg font-semibold text-foreground flex-1">{item.name}</Text>
+          <TouchableOpacity
+            onPress={() => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push({
+                pathname: "/client/edit",
+                params: { clientId: item.id },
+              });
+            }}
+            style={{ opacity: 1 }}
+            activeOpacity={0.6}
+          >
+            <Text className="text-primary text-sm font-medium">Modifier</Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
+        {item.company ? (
+          <Text className="text-sm text-muted mb-1">{item.company}</Text>
+        ) : null}
+        {item.phone ? (
+          <Text className="text-sm text-muted">{item.phone}</Text>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <ScreenContainer>
+      <View className="flex-1 px-4 pt-4">
+        {/* Header */}
+        <View className="mb-4">
+          <Text className="text-3xl font-bold text-foreground mb-2">Clients</Text>
+          <TextInput
+            className="bg-surface rounded-xl px-4 py-3 text-foreground border border-border"
+            placeholder="Rechercher un client..."
+            placeholderTextColor={colors.muted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+        </View>
+
+        {/* Client List */}
+        <FlatList
+          data={filteredClients}
+          renderItem={renderClient}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
+          ListEmptyComponent={
+            <View className="items-center justify-center py-12">
+              <Text className="text-muted text-center text-base">
+                {searchQuery
+                  ? "Aucun client trouvé"
+                  : "Aucun client.\nAppuyez sur + pour ajouter un client."}
+              </Text>
+            </View>
+          }
+        />
+
+        {/* Floating Add Button */}
+        <TouchableOpacity
+          onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            router.push("/client/add");
+          }}
+          style={{
+            position: "absolute",
+            right: 20,
+            bottom: 20,
+            backgroundColor: colors.primary,
+            width: 60,
+            height: 60,
+            borderRadius: 30,
+            justifyContent: "center",
+            alignItems: "center",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
+          activeOpacity={0.8}
+        >
+          <IconSymbol name="plus" size={32} color="#ffffff" />
+        </TouchableOpacity>
+      </View>
     </ScreenContainer>
   );
 }
