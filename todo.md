@@ -61,3 +61,10 @@
 - [x] Display photos in Delivery Detail/History
 - [x] Include photos in printable reports
 - [x] Add photo deletion functionality
+
+
+## Post-Delivery Photo Capture (New)
+- [x] Add photo capture button to Delivery Summary screen
+- [x] Allow editing photos after delivery is completed
+- [x] Update delivery record with new photos
+- [x] Display updated photos in history

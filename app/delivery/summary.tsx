@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Alert, Share, Platform, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -22,6 +22,9 @@ export default function DeliverySummaryScreen() {
       photosJson: string;
     }>();
 
+  const [photos, setPhotos] = useState<string[]>(photosJson ? JSON.parse(photosJson) : []);
+  const [deliveryId, setDeliveryId] = useState<string | null>(null);
+
   const startTimestamp = Number(startTime);
   const endTimestamp = Number(endTime);
   const liters = Number(litersDelivered);
@@ -34,8 +37,7 @@ export default function DeliverySummaryScreen() {
 
   const saveDeliveryRecord = async () => {
     try {
-      const photos = photosJson ? JSON.parse(photosJson) : [];
-      await saveDelivery({
+      const delivery = await saveDelivery({
         clientId,
         clientName,
         clientCompany,
@@ -46,9 +48,24 @@ export default function DeliverySummaryScreen() {
         litersDelivered: liters,
         photos,
       });
+      setDeliveryId(delivery.id);
     } catch (error) {
       console.error("Error saving delivery:", error);
     }
+  };
+
+  const handleAddPhotos = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push({
+      pathname: "/delivery/capture-photo",
+      params: { 
+        photosJson: JSON.stringify(photos),
+        isPostDelivery: "true",
+        deliveryId: deliveryId || "",
+      },
+    });
   };
 
   const formatDateTime = (timestamp: number) => {
@@ -207,18 +224,63 @@ Généré le ${new Date().toLocaleString("fr-CA")}
           </View>
 
           {/* Photos Section */}
-          {photosJson && JSON.parse(photosJson).length > 0 ? (
-            <View className="mb-6">
-              <Text className="text-lg font-bold text-foreground mb-3">Photos de livraison</Text>
+          <View className="mb-6">
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-lg font-bold text-foreground">Photos ({photos.length})</Text>
+              <TouchableOpacity
+                onPress={handleAddPhotos}
+                style={{
+                  backgroundColor: colors.primary,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                }}
+                activeOpacity={0.8}
+              >
+                <Text className="text-white text-sm font-semibold">+ Ajouter</Text>
+              </TouchableOpacity>
+            </View>
+            {photos.length > 0 ? (
               <View className="flex-row flex-wrap gap-2">
-                {JSON.parse(photosJson).map((photo: string, index: number) => (
-                  <View key={index} className="w-24 h-24 rounded-lg overflow-hidden border border-border">
-                    <Image source={{ uri: photo }} className="w-full h-full" />
-                  </View>
+                {photos.map((photo: string, index: number) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => {
+                      const newPhotos = photos.filter((_, i) => i !== index);
+                      setPhotos(newPhotos);
+                      if (Platform.OS !== "web") {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                    }}
+                    style={{ position: "relative" }}
+                  >
+                    <View className="w-24 h-24 rounded-lg overflow-hidden border border-border">
+                      <Image source={{ uri: photo }} className="w-full h-full" resizeMode="cover" />
+                    </View>
+                    <View
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        right: 0,
+                        backgroundColor: "rgba(0,0,0,0.7)",
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text className="text-white text-xs font-bold">x</Text>
+                    </View>
+                  </TouchableOpacity>
                 ))}
               </View>
-            </View>
-          ) : null}
+            ) : (
+              <View className="bg-surface rounded-lg p-4 items-center border border-border">
+                <Text className="text-muted text-sm">Aucune photo. Appuyez sur + pour en ajouter.</Text>
+              </View>
+            )}
+          </View>
 
           {/* Liters Delivered */}
           <View className="bg-primary rounded-2xl p-6 mb-6 items-center">

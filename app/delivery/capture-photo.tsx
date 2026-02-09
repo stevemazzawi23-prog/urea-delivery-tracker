@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { View, Text, TouchableOpacity, Alert, Platform, FlatList } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -10,7 +10,11 @@ import { Image } from "react-native";
 export default function CapturePhotoScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { photosJson } = useLocalSearchParams<{ photosJson: string }>();
+  const { photosJson, isPostDelivery, deliveryId } = useLocalSearchParams<{ 
+    photosJson: string;
+    isPostDelivery: string;
+    deliveryId: string;
+  }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [photos, setPhotos] = useState<string[]>(photosJson ? JSON.parse(photosJson) : []);
   const [isCameraActive, setIsCameraActive] = useState(true);
@@ -50,10 +54,30 @@ export default function CapturePhotoScreen() {
     }
   };
 
-  const handleDone = () => {
+  const handleDone = async () => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+
+    if (isPostDelivery === "true" && deliveryId) {
+      // Update delivery with new photos
+      try {
+        const { getDeliveries, deleteDelivery, saveDelivery } = await import("@/lib/storage");
+        const deliveries = await getDeliveries();
+        const delivery = deliveries.find((d) => d.id === deliveryId);
+        
+        if (delivery) {
+          await deleteDelivery(deliveryId);
+          await saveDelivery({
+            ...delivery,
+            photos,
+          });
+        }
+      } catch (error) {
+        console.error("Error updating delivery:", error);
+      }
+    }
+
     router.back();
     // Pass photos back through route params
     setTimeout(() => {
