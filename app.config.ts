@@ -64,7 +64,7 @@ const config: ExpoConfig = {
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
-    permissions: ["POST_NOTIFICATIONS"],
+    permissions: ["POST_NOTIFICATIONS", "CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
     intentFilters: [
       {
         action: "VIEW",
@@ -86,6 +86,12 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    [
+      "expo-camera",
+      {
+        cameraPermission: "Allow $(PRODUCT_NAME) to access your camera.",
+      },
+    ],
     [
       "expo-audio",
       {
