@@ -192,10 +192,15 @@ export default function CapturePhotoScreen() {
               numColumns={2}
               contentContainerStyle={{ padding: 8 }}
               renderItem={({ item, index }) => (
-                <View className="flex-1 m-2 relative">
+                <View style={{ flex: 1, margin: 8, position: "relative" }}>
                   <Image
                     source={{ uri: item }}
-                    className="w-full h-40 rounded-lg"
+                    style={{
+                      width: "100%",
+                      height: 160,
+                      borderRadius: 8,
+                      backgroundColor: colors.surface,
+                    }}
                     resizeMode="cover"
                   />
                   <TouchableOpacity

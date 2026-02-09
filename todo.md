@@ -68,3 +68,7 @@
 - [x] Allow editing photos after delivery is completed
 - [x] Update delivery record with new photos
 - [x] Display updated photos in history
+
+
+## Bug Fixes
+- [x] Fix photo display issue in capture-photo screen (images not loading)
