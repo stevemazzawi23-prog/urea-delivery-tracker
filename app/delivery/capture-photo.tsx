@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { View, Text, TouchableOpacity, Alert, Platform, FlatList } from "react-native";
+import { useState, useRef, useEffect } from "react";
+import { View, Text, TouchableOpacity, Alert, Platform, FlatList, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -18,17 +18,26 @@ export default function CapturePhotoScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [photos, setPhotos] = useState<string[]>(photosJson ? JSON.parse(photosJson) : []);
   const [isCameraActive, setIsCameraActive] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
+    if (permission === null) {
+      // Permission is still loading
+      return;
+    }
     if (!permission?.granted) {
       requestPermission();
     }
   }, [permission]);
 
   const handleTakePhoto = async () => {
-    if (!cameraRef.current) return;
+    if (!cameraRef.current) {
+      Alert.alert("Erreur", "Caméra non disponible");
+      return;
+    }
 
+    setIsLoading(true);
     try {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
@@ -42,7 +51,10 @@ export default function CapturePhotoScreen() {
         }
       }
     } catch (error) {
+      console.error("Camera error:", error);
       Alert.alert("Erreur", "Impossible de prendre la photo.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -85,6 +97,17 @@ export default function CapturePhotoScreen() {
     }, 100);
   };
 
+  if (permission === null) {
+    return (
+      <ScreenContainer>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text className="text-foreground mt-4">Chargement des permissions...</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   if (!permission?.granted) {
     return (
       <ScreenContainer>
@@ -111,9 +134,17 @@ export default function CapturePhotoScreen() {
 
   return (
     <ScreenContainer edges={["top", "left", "right", "bottom"]}>
-      <View className="flex-1">
+      <View style={{ flex: 1 }}>
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+        <View style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border,
+        }}>
           <TouchableOpacity
             onPress={() => {
               if (Platform.OS !== "web") {
@@ -121,30 +152,42 @@ export default function CapturePhotoScreen() {
               }
               router.back();
             }}
-            style={{ opacity: 1 }}
             activeOpacity={0.6}
           >
-            <Text className="text-primary text-base font-medium">Annuler</Text>
+            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: "500" }}>Annuler</Text>
           </TouchableOpacity>
-          <Text className="text-lg font-semibold text-foreground">Photos ({photos.length})</Text>
+          <Text style={{ fontSize: 18, fontWeight: "600", color: colors.foreground }}>Photos ({photos.length})</Text>
           <TouchableOpacity
             onPress={handleDone}
-            style={{ opacity: 1 }}
             activeOpacity={0.6}
           >
-            <Text className="text-primary text-base font-semibold">Terminer</Text>
+            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: "600" }}>Terminer</Text>
           </TouchableOpacity>
         </View>
 
         {/* Camera or Photos List */}
         {isCameraActive ? (
-          <View className="flex-1">
-            <CameraView ref={cameraRef} className="flex-1" facing="back" />
+          <View style={{ flex: 1 }}>
+            <CameraView 
+              ref={cameraRef} 
+              style={{ flex: 1 }}
+              facing="back"
+              onCameraReady={() => console.log("Camera ready")}
+            />
 
             {/* Camera Controls */}
-            <View className="bg-black px-4 py-6 flex-row items-center justify-center gap-4">
+            <View style={{
+              backgroundColor: "black",
+              paddingHorizontal: 16,
+              paddingVertical: 24,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 16,
+            }}>
               <TouchableOpacity
                 onPress={handleTakePhoto}
+                disabled={isLoading}
                 style={{
                   width: 70,
                   height: 70,
@@ -152,17 +195,22 @@ export default function CapturePhotoScreen() {
                   backgroundColor: colors.primary,
                   justifyContent: "center",
                   alignItems: "center",
+                  opacity: isLoading ? 0.6 : 1,
                 }}
                 activeOpacity={0.8}
               >
-                <View
-                  style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 30,
-                    backgroundColor: "white",
-                  }}
-                />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <View
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      backgroundColor: "white",
+                    }}
+                  />
+                )}
               </TouchableOpacity>
 
               {photos.length > 0 && (
@@ -176,7 +224,7 @@ export default function CapturePhotoScreen() {
                   }}
                   activeOpacity={0.8}
                 >
-                  <Text className="text-foreground font-semibold">
+                  <Text style={{ color: colors.foreground, fontWeight: "600" }}>
                     Voir ({photos.length})
                   </Text>
                 </TouchableOpacity>
@@ -184,7 +232,7 @@ export default function CapturePhotoScreen() {
             </View>
           </View>
         ) : (
-          <View className="flex-1">
+          <View style={{ flex: 1 }}>
             {/* Photos Gallery */}
             <FlatList
               data={photos}
@@ -218,14 +266,20 @@ export default function CapturePhotoScreen() {
                     }}
                     activeOpacity={0.8}
                   >
-                    <Text className="text-white text-lg font-bold">×</Text>
+                    <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>×</Text>
                   </TouchableOpacity>
                 </View>
               )}
             />
 
             {/* Back to Camera Button */}
-            <View className="bg-surface px-4 py-4 border-t border-border">
+            <View style={{
+              backgroundColor: colors.surface,
+              paddingHorizontal: 16,
+              paddingVertical: 16,
+              borderTopWidth: 1,
+              borderTopColor: colors.border,
+            }}>
               <TouchableOpacity
                 onPress={() => setIsCameraActive(true)}
                 style={{
@@ -236,7 +290,7 @@ export default function CapturePhotoScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <Text className="text-white font-semibold">Retour à la caméra</Text>
+                <Text style={{ color: "white", fontWeight: "600" }}>Retour à la caméra</Text>
               </TouchableOpacity>
             </View>
           </View>

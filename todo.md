@@ -72,3 +72,4 @@
 
 ## Bug Fixes
 - [x] Fix photo display issue in capture-photo screen (images not loading)
+- [x] Fix camera black screen issue in capture-photo
