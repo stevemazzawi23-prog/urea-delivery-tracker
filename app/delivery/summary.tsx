@@ -9,11 +9,13 @@ import { saveDelivery } from "@/lib/storage";
 export default function DeliverySummaryScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { clientId, clientName, clientCompany, startTime, endTime, litersDelivered } =
+  const { clientId, clientName, clientCompany, siteId, siteName, startTime, endTime, litersDelivered } =
     useLocalSearchParams<{
       clientId: string;
       clientName: string;
       clientCompany: string;
+      siteId: string;
+      siteName: string;
       startTime: string;
       endTime: string;
       litersDelivered: string;
@@ -35,6 +37,8 @@ export default function DeliverySummaryScreen() {
         clientId,
         clientName,
         clientCompany,
+        siteId,
+        siteName,
         startTime: startTimestamp,
         endTime: endTimestamp,
         litersDelivered: liters,
@@ -77,6 +81,7 @@ ${"=".repeat(40)}
 CLIENT
 Nom: ${clientName}
 ${clientCompany ? `Compagnie: ${clientCompany}` : ""}
+${siteName ? `\nSITE\n${siteName}` : ""}
 
 DÉTAILS DE LA LIVRAISON
 Date: ${formatDateTime(startTimestamp)}
@@ -162,7 +167,13 @@ Généré le ${new Date().toLocaleString("fr-CA")}
             <Text className="text-sm font-medium text-muted mb-2">CLIENT</Text>
             <Text className="text-xl font-bold text-foreground mb-1">{clientName}</Text>
             {clientCompany ? (
-              <Text className="text-base text-muted">{clientCompany}</Text>
+              <Text className="text-base text-muted mb-2">{clientCompany}</Text>
+            ) : null}
+            {siteName ? (
+              <View className="mt-2 pt-2 border-t border-border">
+                <Text className="text-sm font-medium text-muted mb-1">SITE</Text>
+                <Text className="text-base font-semibold text-foreground">{siteName}</Text>
+              </View>
             ) : null}
           </View>
 

@@ -60,6 +60,7 @@ ${"=".repeat(40)}
 CLIENT
 Nom: ${delivery.clientName}
 ${delivery.clientCompany ? `Compagnie: ${delivery.clientCompany}` : ""}
+${delivery.siteName ? `\nSITE\n${delivery.siteName}` : ""}
 
 DÉTAILS DE LA LIVRAISON
 Date: ${formatDateTime(delivery.startTime)}
@@ -130,7 +131,13 @@ Généré le ${new Date().toLocaleString("fr-CA")}
             <Text className="text-sm font-medium text-muted mb-2">CLIENT</Text>
             <Text className="text-xl font-bold text-foreground mb-1">{delivery.clientName}</Text>
             {delivery.clientCompany ? (
-              <Text className="text-base text-muted">{delivery.clientCompany}</Text>
+              <Text className="text-base text-muted mb-2">{delivery.clientCompany}</Text>
+            ) : null}
+            {delivery.siteName ? (
+              <View className="mt-2 pt-2 border-t border-border">
+                <Text className="text-sm font-medium text-muted mb-1">SITE</Text>
+                <Text className="text-base font-semibold text-foreground">{delivery.siteName}</Text>
+              </View>
             ) : null}
           </View>
 

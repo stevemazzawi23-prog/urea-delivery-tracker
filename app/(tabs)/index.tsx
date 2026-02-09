@@ -61,17 +61,13 @@ export default function ClientsScreen() {
     );
   };
 
-  const handleStartDelivery = (client: Client) => {
+  const handleClientPress = (client: Client) => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     router.push({
-      pathname: "/delivery/active",
-      params: {
-        clientId: client.id,
-        clientName: client.name,
-        clientCompany: client.company,
-      },
+      pathname: "/client/detail",
+      params: { clientId: client.id },
     });
   };
 
@@ -84,7 +80,7 @@ export default function ClientsScreen() {
 
   const renderClient = ({ item }: { item: Client }) => (
     <TouchableOpacity
-      onPress={() => handleStartDelivery(item)}
+      onPress={() => handleClientPress(item)}
       onLongPress={() => handleDeleteClient(item)}
       style={{ opacity: 1 }}
       activeOpacity={0.7}

@@ -37,3 +37,17 @@
 - [x] Add loading states
 - [x] Add empty states for lists
 - [x] Test all user flows end-to-end
+
+
+## Sites Management (New)
+- [x] Create site data model and AsyncStorage functions
+- [x] Add sites list to client detail screen
+- [x] Implement Add Site screen
+- [x] Implement Edit Site screen
+- [x] Add delete site functionality
+
+## Delivery Tracking Enhancement
+- [x] Update Active Delivery screen to show selected site
+- [x] Update Delivery Summary to include site information
+- [x] Update Delivery History to display site details
+- [x] Update storage to track site_id with deliveries

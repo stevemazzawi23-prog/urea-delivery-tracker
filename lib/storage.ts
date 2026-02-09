@@ -11,11 +11,21 @@ export interface Client {
   createdAt: number;
 }
 
+export interface Site {
+  id: string;
+  clientId: string;
+  name: string;
+  address: string;
+  createdAt: number;
+}
+
 export interface Delivery {
   id: string;
   clientId: string;
   clientName: string;
   clientCompany: string;
+  siteId: string;
+  siteName: string;
   startTime: number;
   endTime: number;
   litersDelivered: number;
@@ -24,6 +34,7 @@ export interface Delivery {
 
 // Storage Keys
 const CLIENTS_KEY = "@urea_delivery_clients";
+const SITES_KEY = "@urea_delivery_sites";
 const DELIVERIES_KEY = "@urea_delivery_deliveries";
 
 // Client Functions
@@ -76,6 +87,69 @@ export async function deleteClient(id: string): Promise<void> {
   } catch (error) {
     console.error("Error deleting client:", error);
     throw error;
+  }
+}
+
+// Site Functions
+export async function getSites(): Promise<Site[]> {
+  try {
+    const data = await AsyncStorage.getItem(SITES_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("Error loading sites:", error);
+    return [];
+  }
+}
+
+export async function saveSite(site: Omit<Site, "id" | "createdAt">): Promise<Site> {
+  try {
+    const sites = await getSites();
+    const newSite: Site = {
+      ...site,
+      id: Date.now().toString(),
+      createdAt: Date.now(),
+    };
+    sites.push(newSite);
+    await AsyncStorage.setItem(SITES_KEY, JSON.stringify(sites));
+    return newSite;
+  } catch (error) {
+    console.error("Error saving site:", error);
+    throw error;
+  }
+}
+
+export async function updateSite(id: string, updates: Partial<Site>): Promise<void> {
+  try {
+    const sites = await getSites();
+    const index = sites.findIndex((s) => s.id === id);
+    if (index !== -1) {
+      sites[index] = { ...sites[index], ...updates };
+      await AsyncStorage.setItem(SITES_KEY, JSON.stringify(sites));
+    }
+  } catch (error) {
+    console.error("Error updating site:", error);
+    throw error;
+  }
+}
+
+export async function deleteSite(id: string): Promise<void> {
+  try {
+    const sites = await getSites();
+    const filtered = sites.filter((s) => s.id !== id);
+    await AsyncStorage.setItem(SITES_KEY, JSON.stringify(filtered));
+  } catch (error) {
+    console.error("Error deleting site:", error);
+    throw error;
+  }
+}
+
+export async function getSitesByClient(clientId: string): Promise<Site[]> {
+  try {
+    const sites = await getSites();
+    return sites.filter((s) => s.clientId === clientId);
+  } catch (error) {
+    console.error("Error loading client sites:", error);
+    return [];
   }
 }
 

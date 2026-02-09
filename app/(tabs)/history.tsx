@@ -121,6 +121,9 @@ export default function HistoryScreen() {
             {item.clientCompany ? (
               <Text className="text-sm text-muted">{item.clientCompany}</Text>
             ) : null}
+            {item.siteName ? (
+              <Text className="text-xs text-muted mt-1">{item.siteName}</Text>
+            ) : null}
           </View>
           <View className="items-end">
             <Text className="text-2xl font-bold text-primary">{item.litersDelivered}</Text>

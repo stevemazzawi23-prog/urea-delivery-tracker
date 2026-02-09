@@ -8,10 +8,12 @@ import { useColors } from "@/hooks/use-colors";
 export default function ActiveDeliveryScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { clientId, clientName, clientCompany } = useLocalSearchParams<{
+  const { clientId, clientName, clientCompany, siteId, siteName } = useLocalSearchParams<{
     clientId: string;
     clientName: string;
     clientCompany: string;
+    siteId: string;
+    siteName: string;
   }>();
 
   const [startTime] = useState(Date.now());
@@ -68,6 +70,8 @@ export default function ActiveDeliveryScreen() {
         clientId,
         clientName,
         clientCompany,
+        siteId,
+        siteName,
         startTime: startTime.toString(),
         endTime: endTime.toString(),
         litersDelivered: liters,
@@ -108,7 +112,13 @@ export default function ActiveDeliveryScreen() {
           <View className="bg-surface rounded-2xl p-6 mb-8 border border-border">
             <Text className="text-2xl font-bold text-foreground mb-1">{clientName}</Text>
             {clientCompany ? (
-              <Text className="text-base text-muted">{clientCompany}</Text>
+              <Text className="text-base text-muted mb-2">{clientCompany}</Text>
+            ) : null}
+            {siteName ? (
+              <View className="mt-2 pt-2 border-t border-border">
+                <Text className="text-sm font-medium text-muted mb-1">SITE</Text>
+                <Text className="text-base font-semibold text-foreground">{siteName}</Text>
+              </View>
             ) : null}
           </View>
 
