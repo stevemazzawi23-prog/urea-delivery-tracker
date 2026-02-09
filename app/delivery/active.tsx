@@ -19,6 +19,7 @@ export default function ActiveDeliveryScreen() {
   const [startTime] = useState(Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [liters, setLiters] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export default function ActiveDeliveryScreen() {
         startTime: startTime.toString(),
         endTime: endTime.toString(),
         litersDelivered: liters,
+        photosJson: JSON.stringify(photos),
       },
     });
   };
@@ -150,6 +152,67 @@ export default function ActiveDeliveryScreen() {
               keyboardType="numeric"
               returnKeyType="done"
             />
+          </View>
+
+          {/* Photos Section */}
+          <View className="mb-6">
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-sm font-medium text-muted">Photos ({photos.length})</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  router.push({
+                    pathname: "/delivery/capture-photo",
+                    params: { photosJson: JSON.stringify(photos) },
+                  });
+                }}
+                style={{
+                  backgroundColor: colors.primary,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                }}
+                activeOpacity={0.8}
+              >
+                <Text className="text-white text-sm font-semibold">+ Ajouter</Text>
+              </TouchableOpacity>
+            </View>
+            {photos.length > 0 ? (
+              <View className="flex-row flex-wrap gap-2">
+                {photos.map((photo, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => {
+                      const newPhotos = photos.filter((_, i) => i !== index);
+                      setPhotos(newPhotos);
+                      if (Platform.OS !== "web") {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                    }}
+                    style={{ position: "relative" }}
+                  >
+                    <View className="w-20 h-20 rounded-lg overflow-hidden border border-border bg-surface" />
+                    <View
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        right: 0,
+                        backgroundColor: "rgba(0,0,0,0.7)",
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text className="text-white text-sm font-bold">×</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
           </View>
 
           {/* Stop Button */}

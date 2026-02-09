@@ -29,6 +29,7 @@ export interface Delivery {
   startTime: number;
   endTime: number;
   litersDelivered: number;
+  photos: string[]; // Array of photo URIs
   createdAt: number;
 }
 

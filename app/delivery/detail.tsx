@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Alert, Share, Platform } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Alert, Share, Platform, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
@@ -166,6 +166,20 @@ Généré le ${new Date().toLocaleString("fr-CA")}
               </Text>
             </View>
           </View>
+
+          {/* Photos Section */}
+          {delivery.photos && delivery.photos.length > 0 ? (
+            <View className="mb-6">
+              <Text className="text-lg font-bold text-foreground mb-3">Photos de livraison</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {delivery.photos.map((photo, index) => (
+                  <View key={index} className="w-24 h-24 rounded-lg overflow-hidden border border-border">
+                    <Image source={{ uri: photo }} className="w-full h-full" resizeMode="cover" />
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
 
           {/* Liters Delivered */}
           <View className="bg-primary rounded-2xl p-6 mb-6 items-center">

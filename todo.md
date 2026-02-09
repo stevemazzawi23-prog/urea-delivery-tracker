@@ -51,3 +51,13 @@
 - [x] Update Delivery Summary to include site information
 - [x] Update Delivery History to display site details
 - [x] Update storage to track site_id with deliveries
+
+
+## Photo Capture Feature (New)
+- [x] Update Delivery model to include photos array
+- [x] Create photo capture screen with camera integration
+- [x] Add photo gallery to Active Delivery screen
+- [x] Display photos in Delivery Summary
+- [x] Display photos in Delivery Detail/History
+- [x] Include photos in printable reports
+- [x] Add photo deletion functionality

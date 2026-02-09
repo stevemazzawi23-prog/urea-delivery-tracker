@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Alert, Share, Platform } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Alert, Share, Platform, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
@@ -9,7 +9,7 @@ import { saveDelivery } from "@/lib/storage";
 export default function DeliverySummaryScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { clientId, clientName, clientCompany, siteId, siteName, startTime, endTime, litersDelivered } =
+  const { clientId, clientName, clientCompany, siteId, siteName, startTime, endTime, litersDelivered, photosJson } =
     useLocalSearchParams<{
       clientId: string;
       clientName: string;
@@ -19,6 +19,7 @@ export default function DeliverySummaryScreen() {
       startTime: string;
       endTime: string;
       litersDelivered: string;
+      photosJson: string;
     }>();
 
   const startTimestamp = Number(startTime);
@@ -33,6 +34,7 @@ export default function DeliverySummaryScreen() {
 
   const saveDeliveryRecord = async () => {
     try {
+      const photos = photosJson ? JSON.parse(photosJson) : [];
       await saveDelivery({
         clientId,
         clientName,
@@ -42,6 +44,7 @@ export default function DeliverySummaryScreen() {
         startTime: startTimestamp,
         endTime: endTimestamp,
         litersDelivered: liters,
+        photos,
       });
     } catch (error) {
       console.error("Error saving delivery:", error);
@@ -202,6 +205,20 @@ Généré le ${new Date().toLocaleString("fr-CA")}
               </Text>
             </View>
           </View>
+
+          {/* Photos Section */}
+          {photosJson && JSON.parse(photosJson).length > 0 ? (
+            <View className="mb-6">
+              <Text className="text-lg font-bold text-foreground mb-3">Photos de livraison</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {JSON.parse(photosJson).map((photo: string, index: number) => (
+                  <View key={index} className="w-24 h-24 rounded-lg overflow-hidden border border-border">
+                    <Image source={{ uri: photo }} className="w-full h-full" />
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
 
           {/* Liters Delivered */}
           <View className="bg-primary rounded-2xl p-6 mb-6 items-center">
