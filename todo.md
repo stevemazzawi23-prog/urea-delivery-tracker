@@ -79,3 +79,4 @@
 - [x] Configure Android permissions and camera plugin
 - [ ] Build APK for Android testing
 - [ ] Test app on Android device
+- [x] Fix pnpm installation error in Android build (switched to npm)
