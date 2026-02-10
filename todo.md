@@ -80,3 +80,13 @@
 - [ ] Build APK for Android testing
 - [ ] Test app on Android device
 - [x] Fix pnpm installation error in Android build (switched to npm)
+
+
+## Email & Proof of Delivery (POD)
+- [x] Add email field to clients (database schema)
+- [x] Create tRPC API for client, site, and delivery management
+- [x] Implement email validation in API
+- [x] Add POD email sending functionality (backend)
+- [x] Create email input screen for client management (frontend)
+- [x] Add email sending button to delivery summary (frontend)
+- [ ] Configure SMTP or SendGrid integration (optional)

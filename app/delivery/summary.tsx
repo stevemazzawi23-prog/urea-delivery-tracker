@@ -149,6 +149,20 @@ Généré le ${new Date().toLocaleString("fr-CA")}
     router.replace("/");
   };
 
+  const handleSendEmailPOD = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    Alert.alert(
+      "Envoyer POD par email",
+      "Cette fonctionnalite est en cours de configuration. Utilisez Partager/Imprimer pour envoyer le rapport.",
+      [
+        { text: "OK", style: "default" },
+      ]
+    );
+  };
+
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
       <View className="flex-1">
@@ -291,6 +305,20 @@ Généré le ${new Date().toLocaleString("fr-CA")}
 
           {/* Action Buttons */}
           <View className="mb-6">
+            <TouchableOpacity
+              onPress={handleSendEmailPOD}
+              style={{
+                backgroundColor: colors.success,
+                paddingVertical: 14,
+                borderRadius: 12,
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+              activeOpacity={0.8}
+            >
+              <Text className="text-white text-base font-semibold">📧 Envoyer POD par email</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               onPress={handleShare}
               style={{

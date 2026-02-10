@@ -7,6 +7,7 @@ export interface Client {
   company: string;
   phone: string;
   address: string;
+  email?: string;
   notes: string;
   createdAt: number;
 }
