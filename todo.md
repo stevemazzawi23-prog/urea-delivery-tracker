@@ -90,3 +90,9 @@
 - [x] Create email input screen for client management (frontend)
 - [x] Add email sending button to delivery summary (frontend)
 - [ ] Configure SMTP or SendGrid integration (optional)
+
+
+## Website Integration
+- [x] Create About/Website tab in navigation
+- [x] Integrate SP Logistix website component into mobile app
+- [x] Add contact form integration
