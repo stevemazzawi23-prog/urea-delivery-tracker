@@ -108,12 +108,12 @@ const config: ExpoConfig = {
     [
       "expo-splash-screen",
       {
-        image: "./assets/images/splash-icon.png",
-        imageWidth: 200,
+        image: "./assets/images/sp-logistix-logo.avif",
+        imageWidth: 250,
         resizeMode: "contain",
         backgroundColor: "#ffffff",
         dark: {
-          backgroundColor: "#000000",
+          backgroundColor: "#1a1a1a",
         },
       },
     ],

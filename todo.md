@@ -96,3 +96,9 @@
 - [x] Create About/Website tab in navigation
 - [x] Integrate SP Logistix website component into mobile app
 - [x] Add contact form integration
+
+
+## Splash Screen & Branding
+- [x] Add SP Logistix logo to splash screen
+- [x] Update app icon with SP Logistix logo
+- [x] Configure splash screen appearance
