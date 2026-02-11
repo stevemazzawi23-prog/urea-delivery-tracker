@@ -102,3 +102,4 @@
 - [x] Add SP Logistix logo to splash screen
 - [x] Update app icon with SP Logistix logo
 - [x] Configure splash screen appearance
+- [x] Fix splash screen logo not displaying (converted AVIF to PNG)
