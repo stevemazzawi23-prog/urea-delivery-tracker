@@ -20,6 +20,12 @@ export interface Site {
   createdAt: number;
 }
 
+export interface DeliveryUnit {
+  id: string;
+  unitName: string; // e.g., "Camion 1", "Réservoir A"
+  liters: number;
+}
+
 export interface Delivery {
   id: string;
   clientId: string;
@@ -29,7 +35,8 @@ export interface Delivery {
   siteName: string;
   startTime: number;
   endTime: number;
-  litersDelivered: number;
+  units: DeliveryUnit[]; // Multiple units with liters each
+  litersDelivered: number; // Total liters (calculated from units)
   photos: string[]; // Array of photo URIs
   createdAt: number;
 }

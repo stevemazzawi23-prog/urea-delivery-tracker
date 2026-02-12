@@ -130,12 +130,22 @@ export default function HistoryScreen() {
             <Text className="text-xs text-muted">litres</Text>
           </View>
         </View>
-        <View className="flex-row justify-between items-center">
+        <View className="flex-row justify-between items-center mb-2">
           <Text className="text-sm text-muted">{formatTime(item.startTime)}</Text>
           <Text className="text-sm text-muted">
             {formatDuration(item.startTime, item.endTime)}
           </Text>
         </View>
+        {item.units && item.units.length > 0 && (
+          <View className="bg-background rounded-lg p-2 mt-2">
+            <Text className="text-xs text-muted mb-1">Details:</Text>
+            {item.units.map((unit) => (
+              <Text key={unit.id} className="text-xs text-foreground">
+                {unit.unitName}: {unit.liters}L
+              </Text>
+            ))}
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );

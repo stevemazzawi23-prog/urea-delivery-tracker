@@ -103,3 +103,12 @@
 - [x] Update app icon with SP Logistix logo
 - [x] Configure splash screen appearance
 - [x] Fix splash screen logo not displaying (converted AVIF to PNG)
+
+
+## Multiple Units Per Delivery (New)
+- [x] Add units management to delivery data model
+- [x] Create units input interface during active delivery
+- [x] Display units summary before sending report
+- [x] Calculate total liters from all units
+- [x] Include units breakdown in delivery report
+- [x] Display units details in delivery history

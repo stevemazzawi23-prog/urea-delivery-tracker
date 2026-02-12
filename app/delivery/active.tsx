@@ -1,9 +1,19 @@
-import { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert, Platform } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Platform,
+  ScrollView,
+  FlatList,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { DeliveryUnit } from "@/lib/storage";
 
 export default function ActiveDeliveryScreen() {
   const colors = useColors();
@@ -18,7 +28,9 @@ export default function ActiveDeliveryScreen() {
 
   const [startTime] = useState(Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [liters, setLiters] = useState("");
+  const [units, setUnits] = useState<DeliveryUnit[]>([]);
+  const [unitName, setUnitName] = useState("");
+  const [unitLiters, setUnitLiters] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -53,9 +65,42 @@ export default function ActiveDeliveryScreen() {
     });
   };
 
-  const handleStopDelivery = () => {
-    if (!liters.trim() || isNaN(Number(liters)) || Number(liters) <= 0) {
+  const handleAddUnit = () => {
+    if (!unitName.trim()) {
+      Alert.alert("Erreur", "Veuillez entrer le nom de l'unité (ex: Camion 1, Réservoir A)");
+      return;
+    }
+
+    if (!unitLiters.trim() || isNaN(Number(unitLiters)) || Number(unitLiters) <= 0) {
       Alert.alert("Erreur", "Veuillez entrer un nombre de litres valide.");
+      return;
+    }
+
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    const newUnit: DeliveryUnit = {
+      id: Date.now().toString(),
+      unitName: unitName.trim(),
+      liters: Number(unitLiters),
+    };
+
+    setUnits([...units, newUnit]);
+    setUnitName("");
+    setUnitLiters("");
+  };
+
+  const handleDeleteUnit = (unitId: string) => {
+    setUnits(units.filter((u) => u.id !== unitId));
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const handleStopDelivery = () => {
+    if (units.length === 0) {
+      Alert.alert("Erreur", "Veuillez ajouter au moins une unité avant de terminer.");
       return;
     }
 
@@ -64,6 +109,7 @@ export default function ActiveDeliveryScreen() {
     }
 
     const endTime = Date.now();
+    const totalLiters = units.reduce((sum, unit) => sum + unit.liters, 0);
 
     router.replace({
       pathname: "/delivery/summary",
@@ -75,161 +121,226 @@ export default function ActiveDeliveryScreen() {
         siteName,
         startTime: startTime.toString(),
         endTime: endTime.toString(),
-        litersDelivered: liters,
+        litersDelivered: totalLiters.toString(),
+        unitsJson: JSON.stringify(units),
         photosJson: JSON.stringify(photos),
       },
     });
   };
 
+  const handleCapturePhoto = () => {
+    router.push({
+      pathname: "/delivery/capture-photo",
+      params: {
+        returnPath: "/delivery/active",
+        clientId,
+        clientName,
+        clientCompany,
+        siteId,
+        siteName,
+        photosJson: JSON.stringify(photos),
+      },
+    });
+  };
+
+  const totalLiters = units.reduce((sum, unit) => sum + unit.liters, 0);
+
   return (
-    <ScreenContainer edges={["top", "left", "right"]}>
-      <View className="flex-1">
-        {/* Header */}
-        <View className="px-4 py-3 border-b border-border">
-          <TouchableOpacity
-            onPress={() => {
-              Alert.alert(
-                "Annuler la livraison",
-                "Voulez-vous vraiment annuler cette livraison?",
-                [
-                  { text: "Non", style: "cancel" },
-                  {
-                    text: "Oui",
-                    style: "destructive",
-                    onPress: () => router.back(),
-                  },
-                ]
-              );
-            }}
-            style={{ opacity: 1 }}
-            activeOpacity={0.6}
-          >
-            <Text className="text-primary text-base font-medium">Annuler</Text>
-          </TouchableOpacity>
+    <ScreenContainer>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+        {/* Header with Timer */}
+        <View style={{ backgroundColor: colors.surface, padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Text style={{ fontSize: 14, color: colors.muted, marginBottom: 4 }}>
+            {formatDateTime(startTime)}
+          </Text>
+          <Text style={{ fontSize: 32, fontWeight: "bold", color: colors.foreground }}>
+            {formatTime(elapsedSeconds)}
+          </Text>
         </View>
 
-        {/* Content */}
-        <View className="flex-1 px-6 pt-8">
-          {/* Client Info */}
-          <View className="bg-surface rounded-2xl p-6 mb-8 border border-border">
-            <Text className="text-2xl font-bold text-foreground mb-1">{clientName}</Text>
-            {clientCompany ? (
-              <Text className="text-base text-muted mb-2">{clientCompany}</Text>
-            ) : null}
-            {siteName ? (
-              <View className="mt-2 pt-2 border-t border-border">
-                <Text className="text-sm font-medium text-muted mb-1">SITE</Text>
-                <Text className="text-base font-semibold text-foreground">{siteName}</Text>
-              </View>
-            ) : null}
-          </View>
-
-          {/* Timer */}
-          <View className="items-center mb-8">
-            <Text className="text-sm font-medium text-muted mb-2">TEMPS ÉCOULÉ</Text>
-            <Text className="text-6xl font-bold text-foreground tracking-wider">
-              {formatTime(elapsedSeconds)}
+        {/* Client & Site Info */}
+        <View style={{ padding: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 }}>
+          <View>
+            <Text style={{ fontSize: 12, color: colors.muted }}>Client</Text>
+            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>
+              {clientName} {clientCompany && `(${clientCompany})`}
             </Text>
           </View>
-
-          {/* Start Time */}
-          <View className="bg-surface rounded-xl p-4 mb-6 border border-border">
-            <Text className="text-sm font-medium text-muted mb-1">Heure de début</Text>
-            <Text className="text-lg font-semibold text-foreground">
-              {formatDateTime(startTime)}
+          <View>
+            <Text style={{ fontSize: 12, color: colors.muted }}>Site</Text>
+            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>
+              {siteName}
             </Text>
           </View>
+        </View>
 
-          {/* Liters Input */}
-          <View className="mb-8">
-            <Text className="text-sm font-medium text-muted mb-2">Litres livrés</Text>
-            <TextInput
-              className="bg-surface rounded-xl px-6 py-4 text-foreground border border-border text-3xl font-semibold text-center"
-              placeholder="0"
-              placeholderTextColor={colors.muted}
-              value={liters}
-              onChangeText={setLiters}
-              keyboardType="numeric"
-              returnKeyType="done"
-            />
-          </View>
+        {/* Add Unit Section */}
+        <View style={{ padding: 16, gap: 12 }}>
+          <Text style={{ fontSize: 18, fontWeight: "bold", color: colors.foreground }}>
+            Ajouter une unité
+          </Text>
 
-          {/* Photos Section */}
-          <View className="mb-6">
-            <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-sm font-medium text-muted">Photos ({photos.length})</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  if (Platform.OS !== "web") {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                  router.push({
-                    pathname: "/delivery/capture-photo",
-                    params: { photosJson: JSON.stringify(photos) },
-                  });
-                }}
-                style={{
-                  backgroundColor: colors.primary,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                }}
-                activeOpacity={0.8}
-              >
-                <Text className="text-white text-sm font-semibold">+ Ajouter</Text>
-              </TouchableOpacity>
-            </View>
-            {photos.length > 0 ? (
-              <View className="flex-row flex-wrap gap-2">
-                {photos.map((photo, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => {
-                      const newPhotos = photos.filter((_, i) => i !== index);
-                      setPhotos(newPhotos);
-                      if (Platform.OS !== "web") {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }
-                    }}
-                    style={{ position: "relative" }}
-                  >
-                    <View className="w-20 h-20 rounded-lg overflow-hidden border border-border bg-surface" />
-                    <View
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        right: 0,
-                        backgroundColor: "rgba(0,0,0,0.7)",
-                        width: 24,
-                        height: 24,
-                        borderRadius: 12,
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Text className="text-white text-sm font-bold">×</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : null}
-          </View>
-
-          {/* Stop Button */}
-          <TouchableOpacity
-            onPress={handleStopDelivery}
+          <TextInput
+            placeholder="Nom de l'unité (ex: Camion 1, Réservoir A)"
+            value={unitName}
+            onChangeText={setUnitName}
             style={{
-              backgroundColor: colors.error,
-              paddingVertical: 16,
-              borderRadius: 16,
+              padding: 12,
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 10,
+              color: colors.foreground,
+              backgroundColor: colors.surface,
+            }}
+            placeholderTextColor={colors.muted}
+          />
+
+          <TextInput
+            placeholder="Litres livrés"
+            value={unitLiters}
+            onChangeText={setUnitLiters}
+            keyboardType="decimal-pad"
+            style={{
+              padding: 12,
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 10,
+              color: colors.foreground,
+              backgroundColor: colors.surface,
+            }}
+            placeholderTextColor={colors.muted}
+          />
+
+          <TouchableOpacity
+            onPress={handleAddUnit}
+            style={{
+              backgroundColor: "#1B5E20",
+              paddingVertical: 12,
+              borderRadius: 10,
               alignItems: "center",
             }}
             activeOpacity={0.8}
           >
-            <Text className="text-white text-lg font-bold">Terminer la livraison</Text>
+            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>
+              + Ajouter l'unité
+            </Text>
           </TouchableOpacity>
         </View>
-      </View>
+
+        {/* Units List */}
+        {units.length > 0 && (
+          <View style={{ padding: 16, gap: 12 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ fontSize: 18, fontWeight: "bold", color: colors.foreground }}>
+                Unités ({units.length})
+              </Text>
+              <Text style={{ fontSize: 16, fontWeight: "bold", color: "#1B5E20" }}>
+                Total: {totalLiters}L
+              </Text>
+            </View>
+
+            {units.map((unit) => (
+              <View
+                key={unit.id}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 10,
+                  padding: 12,
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }}>
+                    {unit.unitName}
+                  </Text>
+                  <Text style={{ fontSize: 14, color: colors.muted }}>
+                    {unit.liters} litres
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleDeleteUnit(unit.id)}
+                  style={{
+                    backgroundColor: "#EF4444",
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 12 }}>
+                    Supprimer
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Photos Section */}
+        <View style={{ padding: 16, gap: 12 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold", color: colors.foreground }}>
+              Photos ({photos.length})
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleCapturePhoto}
+            style={{
+              backgroundColor: colors.surface,
+              borderWidth: 2,
+              borderColor: colors.border,
+              borderStyle: "dashed",
+              borderRadius: 10,
+              paddingVertical: 16,
+              alignItems: "center",
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 14 }}>
+              📷 Ajouter une photo
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={{ padding: 16, gap: 12 }}>
+          <TouchableOpacity
+            onPress={handleStopDelivery}
+            style={{
+              backgroundColor: "#1B5E20",
+              paddingVertical: 14,
+              borderRadius: 10,
+              alignItems: "center",
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>
+              ✓ Terminer la livraison
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+              paddingVertical: 14,
+              borderRadius: 10,
+              alignItems: "center",
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 16 }}>
+              Annuler
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </ScreenContainer>
   );
 }
