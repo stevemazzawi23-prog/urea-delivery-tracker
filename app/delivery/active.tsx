@@ -76,6 +76,47 @@ export default function ActiveDeliveryScreen() {
       return;
     }
 
+    // Check for duplicate unit name
+    const existingUnit = units.find(u => u.unitName.toLowerCase() === unitName.trim().toLowerCase());
+    
+    if (existingUnit) {
+      // Show dialog asking to merge or add new
+      Alert.alert(
+        "Unité déjà existante",
+        `L'unité "${unitName}" existe déjà avec ${existingUnit.liters}L. Que voulez-vous faire?`,
+        [
+          {
+            text: "Ajouter au litrage existant",
+            onPress: () => {
+              const updatedUnits = units.map(u => 
+                u.id === existingUnit.id 
+                  ? { ...u, liters: u.liters + Number(unitLiters) }
+                  : u
+              );
+              setUnits(updatedUnits);
+              setUnitName("");
+              setUnitLiters("");
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+            }
+          },
+          {
+            text: "Entrer un nouveau numéro d'unité",
+            onPress: () => {
+              // Clear the unit name to allow user to enter a different one
+              setUnitName("");
+            }
+          },
+          {
+            text: "Annuler",
+            style: "cancel"
+          }
+        ]
+      );
+      return;
+    }
+
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
