@@ -160,3 +160,4 @@
 - [x] Add work time counter to home page
 - [x] Auto-reset counter when shift ends
 - [x] Display current driver name on home page
+- [x] Fix shift end button not stopping the timer correctly

@@ -100,6 +100,7 @@ export default function HomeScreen() {
             await setCurrentDriver(null);
             setCurrentDriver(null);
             setShiftTime(0);
+            loadStats();
             if (Platform.OS !== "web") {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
