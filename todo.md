@@ -149,3 +149,4 @@
 - [x] Add "View Invoices" button
 - [x] Add "Client Database" button
 - [x] Display quick stats (deliveries today, total liters)
+- [x] Fix home page not displaying at app startup
