@@ -293,32 +293,6 @@ export default function HomeScreen() {
           Actions rapides
         </Text>
 
-        <TouchableOpacity
-          onPress={() => {
-            if (Platform.OS !== "web") {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            router.push("index" as any);
-          }}
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 12,
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            borderWidth: 1,
-            borderColor: colors.border,
-          }}
-          activeOpacity={0.7}
-        >
-          <View>
-            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>Banque de clients</Text>
-            <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>Gérer vos clients et sites</Text>
-          </View>
-          <Text style={{ fontSize: 20, color: colors.muted }}>›</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => handleNavigation("/delivery/select-site")}
