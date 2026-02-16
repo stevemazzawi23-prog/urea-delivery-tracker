@@ -150,3 +150,13 @@
 - [x] Add "Client Database" button
 - [x] Display quick stats (deliveries today, total liters)
 - [x] Fix home page not displaying at app startup
+
+
+## Driver Management & Shift Tracking
+- [x] Create driver data model and storage functions
+- [x] Add driver selection screen
+- [x] Add driver selection button to home page
+- [x] Create shift start/end functionality
+- [x] Add work time counter to home page
+- [x] Auto-reset counter when shift ends
+- [x] Display current driver name on home page

@@ -1,6 +1,21 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Data Models
+export interface Driver {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
+export interface Shift {
+  id: string;
+  driverId: string;
+  driverName: string;
+  startTime: number;
+  endTime?: number;
+  isActive: boolean;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -304,6 +319,145 @@ export async function updateInvoiceStatus(invoiceId: string, status: Invoice['st
     }
   } catch (error) {
     console.error("Error updating invoice status:", error);
+    throw error;
+  }
+}
+
+
+// Storage Keys
+const DRIVERS_KEY = "drivers";
+const SHIFTS_KEY = "shifts";
+
+// Driver Functions
+export async function getDrivers(): Promise<Driver[]> {
+  try {
+    const data = await AsyncStorage.getItem(DRIVERS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("Error getting drivers:", error);
+    return [];
+  }
+}
+
+export async function saveDriver(driver: Driver): Promise<void> {
+  try {
+    const drivers = await getDrivers();
+    const index = drivers.findIndex((d) => d.id === driver.id);
+    if (index >= 0) {
+      drivers[index] = driver;
+    } else {
+      drivers.push(driver);
+    }
+    await AsyncStorage.setItem(DRIVERS_KEY, JSON.stringify(drivers));
+  } catch (error) {
+    console.error("Error saving driver:", error);
+    throw error;
+  }
+}
+
+export async function addDriver(name: string): Promise<Driver> {
+  const driver: Driver = {
+    id: Date.now().toString(),
+    name,
+    createdAt: Date.now(),
+  };
+  await saveDriver(driver);
+  return driver;
+}
+
+export async function deleteDriver(driverId: string): Promise<void> {
+  try {
+    const drivers = await getDrivers();
+    const filtered = drivers.filter((d) => d.id !== driverId);
+    await AsyncStorage.setItem(DRIVERS_KEY, JSON.stringify(filtered));
+  } catch (error) {
+    console.error("Error deleting driver:", error);
+    throw error;
+  }
+}
+
+// Shift Functions
+export async function getShifts(): Promise<Shift[]> {
+  try {
+    const data = await AsyncStorage.getItem(SHIFTS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("Error getting shifts:", error);
+    return [];
+  }
+}
+
+export async function saveShift(shift: Shift): Promise<void> {
+  try {
+    const shifts = await getShifts();
+    const index = shifts.findIndex((s) => s.id === shift.id);
+    if (index >= 0) {
+      shifts[index] = shift;
+    } else {
+      shifts.push(shift);
+    }
+    await AsyncStorage.setItem(SHIFTS_KEY, JSON.stringify(shifts));
+  } catch (error) {
+    console.error("Error saving shift:", error);
+    throw error;
+  }
+}
+
+export async function startShift(driverId: string, driverName: string): Promise<Shift> {
+  // End any active shift for this driver
+  const shifts = await getShifts();
+  const activeShift = shifts.find((s) => s.driverId === driverId && s.isActive);
+  if (activeShift) {
+    activeShift.isActive = false;
+    activeShift.endTime = Date.now();
+    await saveShift(activeShift);
+  }
+
+  const shift: Shift = {
+    id: Date.now().toString(),
+    driverId,
+    driverName,
+    startTime: Date.now(),
+    isActive: true,
+  };
+  await saveShift(shift);
+  return shift;
+}
+
+export async function endShift(driverId: string): Promise<void> {
+  const shifts = await getShifts();
+  const activeShift = shifts.find((s) => s.driverId === driverId && s.isActive);
+  if (activeShift) {
+    activeShift.isActive = false;
+    activeShift.endTime = Date.now();
+    await saveShift(activeShift);
+  }
+}
+
+export async function getActiveShift(driverId: string): Promise<Shift | null> {
+  const shifts = await getShifts();
+  return shifts.find((s) => s.driverId === driverId && s.isActive) || null;
+}
+
+export async function getCurrentDriver(): Promise<Driver | null> {
+  try {
+    const data = await AsyncStorage.getItem("currentDriver");
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error("Error getting current driver:", error);
+    return null;
+  }
+}
+
+export async function setCurrentDriver(driver: Driver | null): Promise<void> {
+  try {
+    if (driver) {
+      await AsyncStorage.setItem("currentDriver", JSON.stringify(driver));
+    } else {
+      await AsyncStorage.removeItem("currentDriver");
+    }
+  } catch (error) {
+    console.error("Error setting current driver:", error);
     throw error;
   }
 }
