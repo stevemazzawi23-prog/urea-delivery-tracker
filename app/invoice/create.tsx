@@ -90,9 +90,9 @@ Site: ${delivery.siteName}
 Quantité livrée: ${invoice.litersDelivered} litres
 
 DÉTAIL DE LA FACTURATION:
-${"=".repeat(50)}
-Frais de service:           ${INVOICE_CONFIG.SERVICE_FEE.toFixed(2)}$
-Livraison (${invoice.litersDelivered}L @ ${INVOICE_CONFIG.PRICE_PER_LITER}$/L): ${(invoice.litersDelivered * INVOICE_CONFIG.PRICE_PER_LITER).toFixed(2)}$
+${"".repeat(50)}
+Frais de service:           ${invoice.serviceFee.toFixed(2)}$
+Livraison (${invoice.litersDelivered}L @ ${invoice.pricePerLiter}$/L): ${invoice.deliveryCost.toFixed(2)}$
                             --------
 Sous-total:                 ${invoice.subtotal.toFixed(2)}$
 
@@ -128,8 +128,8 @@ SP Logistix
         clientEmail: client.email,
         siteName: delivery!.siteName,
         litersDelivered: invoice!.litersDelivered,
-        serviceFee: INVOICE_CONFIG.SERVICE_FEE,
-        pricePerLiter: INVOICE_CONFIG.PRICE_PER_LITER,
+        serviceFee: invoice.serviceFee,
+        pricePerLiter: invoice.pricePerLiter,
         subtotal: invoice!.subtotal,
         gst: invoice!.gst,
         qst: invoice!.qst,
@@ -164,8 +164,8 @@ SP Logistix
           clientAddress: client.address,
           invoiceNumber,
           invoiceDate: Date.now(),
-          serviceFee: INVOICE_CONFIG.SERVICE_FEE,
-          pricePerLiter: INVOICE_CONFIG.PRICE_PER_LITER,
+          serviceFee: invoice.serviceFee,
+          pricePerLiter: invoice.pricePerLiter,
           litersDelivered: invoice.litersDelivered,
           subtotal: invoice.subtotal,
           gst: invoice.gst,
@@ -220,8 +220,8 @@ SP Logistix
         clientEmail: client.email,
         siteName: delivery.siteName,
         litersDelivered: invoice.litersDelivered,
-        serviceFee: INVOICE_CONFIG.SERVICE_FEE,
-        pricePerLiter: INVOICE_CONFIG.PRICE_PER_LITER,
+        serviceFee: invoice.serviceFee,
+        pricePerLiter: invoice.pricePerLiter,
         subtotal: invoice.subtotal,
         gst: invoice.gst,
         qst: invoice.qst,
@@ -338,15 +338,15 @@ SP Logistix
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Text style={{ color: colors.muted }}>Frais de service:</Text>
               <Text style={{ color: colors.foreground }}>
-                ${INVOICE_CONFIG.SERVICE_FEE.toFixed(2)}
+                ${invoice.serviceFee.toFixed(2)}
               </Text>
             </View>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Text style={{ color: colors.muted }}>
-                Livraison ({invoice.litersDelivered}L @ ${INVOICE_CONFIG.PRICE_PER_LITER}/L):
+                Livraison ({invoice.litersDelivered}L @ ${invoice.pricePerLiter}/L):
               </Text>
               <Text style={{ color: colors.foreground }}>
-                ${(invoice.litersDelivered * INVOICE_CONFIG.PRICE_PER_LITER).toFixed(2)}
+                ${invoice.deliveryCost.toFixed(2)}
               </Text>
             </View>
             <View

@@ -294,7 +294,12 @@ export default function HomeScreen() {
         </Text>
 
         <TouchableOpacity
-          onPress={() => handleNavigation("/(tabs)/index")}
+          onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            router.push("index" as any);
+          }}
           style={{
             backgroundColor: colors.surface,
             borderRadius: 12,
