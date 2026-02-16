@@ -21,6 +21,7 @@ import {
   type Delivery,
   type Client,
 } from "@/lib/storage";
+import { generateInvoicePDF, downloadInvoicePDF } from "@/lib/pdf-generator";
 
 export default function CreateInvoiceScreen() {
   const colors = useColors();
@@ -161,6 +162,42 @@ SP Logistix
       });
     } catch (error) {
       Alert.alert("Erreur", "Impossible de partager la facture.");
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    try {
+      if (!delivery || !client || !invoice) return;
+
+      const pdfPath = await generateInvoicePDF({
+        invoiceNumber,
+        invoiceDate: Date.now(),
+        clientName: client.name,
+        clientCompany: client.company,
+        clientAddress: client.address,
+        clientEmail: client.email,
+        siteName: delivery.siteName,
+        litersDelivered: invoice.litersDelivered,
+        serviceFee: INVOICE_CONFIG.SERVICE_FEE,
+        pricePerLiter: INVOICE_CONFIG.PRICE_PER_LITER,
+        subtotal: invoice.subtotal,
+        gst: invoice.gst,
+        qst: invoice.qst,
+        total: invoice.total,
+      });
+
+      await downloadInvoicePDF(pdfPath, `${invoiceNumber}.pdf`);
+
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      Alert.alert("Succès", "Facture téléchargée avec succès!");
+    } catch (error) {
+      Alert.alert("Erreur", "Impossible de générer la facture PDF.");
     }
   };
 
@@ -334,6 +371,23 @@ SP Logistix
           >
             <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>
               📧 Envoyer par email
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleDownloadPDF}
+            style={{
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+              paddingVertical: 14,
+              borderRadius: 10,
+              alignItems: "center",
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 16 }}>
+              📥 Télécharger PDF
             </Text>
           </TouchableOpacity>
 
