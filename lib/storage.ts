@@ -41,10 +41,31 @@ export interface Delivery {
   createdAt: number;
 }
 
+export interface Invoice {
+  id: string;
+  deliveryId: string;
+  clientId: string;
+  clientName: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  invoiceNumber: string;
+  invoiceDate: number;
+  serviceFee: number; // $40
+  pricePerLiter: number; // $2.00
+  litersDelivered: number;
+  subtotal: number;
+  gst: number; // 5%
+  qst: number; // 9.975%
+  total: number;
+  status: 'draft' | 'sent' | 'paid';
+  createdAt: number;
+}
+
 // Storage Keys
 const CLIENTS_KEY = "@urea_delivery_clients";
 const SITES_KEY = "@urea_delivery_sites";
 const DELIVERIES_KEY = "@urea_delivery_deliveries";
+const INVOICES_KEY = "@urea_delivery_invoices";
 
 // Client Functions
 export async function getClients(): Promise<Client[]> {
@@ -208,5 +229,81 @@ export async function getDeliveriesByClient(clientId: string): Promise<Delivery[
   } catch (error) {
     console.error("Error loading client deliveries:", error);
     return [];
+  }
+}
+
+
+// Invoice Pricing Constants
+export const INVOICE_CONFIG = {
+  SERVICE_FEE: 40,
+  PRICE_PER_LITER: 2.0,
+  GST_RATE: 0.05,
+  QST_RATE: 0.09975,
+};
+
+// Invoice calculation function
+export function calculateInvoice(litersDelivered: number) {
+  const subtotal = INVOICE_CONFIG.SERVICE_FEE + (litersDelivered * INVOICE_CONFIG.PRICE_PER_LITER);
+  const gst = subtotal * INVOICE_CONFIG.GST_RATE;
+  const qst = subtotal * INVOICE_CONFIG.QST_RATE;
+  const total = subtotal + gst + qst;
+  
+  return {
+    subtotal: Math.round(subtotal * 100) / 100,
+    gst: Math.round(gst * 100) / 100,
+    qst: Math.round(qst * 100) / 100,
+    total: Math.round(total * 100) / 100,
+  };
+}
+
+// Invoice Functions
+export async function getInvoices(): Promise<Invoice[]> {
+  try {
+    const data = await AsyncStorage.getItem(INVOICES_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("Error loading invoices:", error);
+    return [];
+  }
+}
+
+export async function saveInvoice(invoice: Omit<Invoice, "id" | "createdAt">): Promise<Invoice> {
+  try {
+    const invoices = await getInvoices();
+    const newInvoice: Invoice = {
+      ...invoice,
+      id: Date.now().toString(),
+      createdAt: Date.now(),
+    };
+    invoices.push(newInvoice);
+    await AsyncStorage.setItem(INVOICES_KEY, JSON.stringify(invoices));
+    return newInvoice;
+  } catch (error) {
+    console.error("Error saving invoice:", error);
+    throw error;
+  }
+}
+
+export async function getInvoicesByDelivery(deliveryId: string): Promise<Invoice[]> {
+  try {
+    const invoices = await getInvoices();
+    return invoices.filter((inv) => inv.deliveryId === deliveryId);
+  } catch (error) {
+    console.error("Error getting invoices by delivery:", error);
+    return [];
+  }
+}
+
+export async function updateInvoiceStatus(invoiceId: string, status: Invoice['status']): Promise<void> {
+  try {
+    const invoices = await getInvoices();
+    const index = invoices.findIndex((inv) => inv.id === invoiceId);
+    if (index >= 0) {
+      invoices[index].status = status;
+      await AsyncStorage.setItem(INVOICES_KEY, JSON.stringify(invoices));
+    }
+  } catch (error) {
+    console.error("Error updating invoice status:", error);
+    throw error;
   }
 }

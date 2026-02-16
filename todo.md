@@ -118,3 +118,13 @@
 - [x] Add email field to client list cards
 - [x] Display email icon with client contact info
 - [x] Add email editing capability in client detail screen
+
+
+## Invoicing System
+- [x] Add invoice data model with pricing calculation
+- [x] Create invoice screen with pricing details
+- [x] Calculate taxes (GST/QST for Quebec)
+- [x] Generate invoice PDF
+- [x] Add email sending functionality for invoices
+- [x] Display invoice history
+- [x] Add invoice button to delivery summary

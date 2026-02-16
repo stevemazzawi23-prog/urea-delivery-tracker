@@ -288,7 +288,15 @@ Rapport généré le ${new Date().toLocaleString("fr-CA")}
         {/* Action Buttons */}
         <View style={{ padding: 16, gap: 10 }}>
           <TouchableOpacity
-            onPress={handleShare}
+            onPress={() => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push({
+                pathname: "/invoice/create",
+                params: { deliveryId },
+              });
+            }}
             style={{
               backgroundColor: "#1B5E20",
               paddingVertical: 12,
@@ -298,6 +306,23 @@ Rapport généré le ${new Date().toLocaleString("fr-CA")}
             activeOpacity={0.8}
           >
             <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>
+              💰 Créer une facture
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleShare}
+            style={{
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+              paddingVertical: 12,
+              borderRadius: 10,
+              alignItems: "center",
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 16 }}>
               📤 Partager le rapport
             </Text>
           </TouchableOpacity>
