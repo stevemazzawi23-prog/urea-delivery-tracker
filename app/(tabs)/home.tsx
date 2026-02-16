@@ -100,7 +100,11 @@ export default function HomeScreen() {
             await setCurrentDriver(null);
             setCurrentDriver(null);
             setShiftTime(0);
-            loadStats();
+            setStats({
+              deliveriesToday: 0,
+              totalLitersToday: 0,
+              totalInvoices: 0,
+            });
             if (Platform.OS !== "web") {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }

@@ -161,3 +161,5 @@
 - [x] Auto-reset counter when shift ends
 - [x] Display current driver name on home page
 - [x] Fix shift end button not stopping the timer correctly
+- [x] Fix shift timer not stopping when shift ends
+- [x] Reset all stats (time, liters, deliveries) to zero when shift ends
