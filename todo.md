@@ -135,3 +135,9 @@
 - [x] Create PDF generation utility with logo
 - [x] Add download PDF button to invoice screen
 - [x] Test PDF generation and download
+
+
+## Email PDF Attachment
+- [x] Create email utility with PDF attachment support
+- [x] Update invoice send function to attach PDF
+- [x] Test email sending with PDF on mobile and web

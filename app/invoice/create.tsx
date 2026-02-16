@@ -22,6 +22,7 @@ import {
   type Client,
 } from "@/lib/storage";
 import { generateInvoicePDF, downloadInvoicePDF } from "@/lib/pdf-generator";
+import { sendEmailWithAttachment, generateEmailBody } from "@/lib/email-utils";
 
 export default function CreateInvoiceScreen() {
   const colors = useColors();
@@ -117,6 +118,42 @@ SP Logistix
     }
 
     try {
+      // Generate PDF first
+      const pdfPath = await generateInvoicePDF({
+        invoiceNumber,
+        invoiceDate: Date.now(),
+        clientName: client.name,
+        clientCompany: client.company,
+        clientAddress: client.address,
+        clientEmail: client.email,
+        siteName: delivery!.siteName,
+        litersDelivered: invoice!.litersDelivered,
+        serviceFee: INVOICE_CONFIG.SERVICE_FEE,
+        pricePerLiter: INVOICE_CONFIG.PRICE_PER_LITER,
+        subtotal: invoice!.subtotal,
+        gst: invoice!.gst,
+        qst: invoice!.qst,
+        total: invoice!.total,
+      });
+
+      // Generate email body
+      const emailBody = await generateEmailBody({
+        invoiceNumber,
+        clientName: client.name,
+        litersDelivered: invoice!.litersDelivered,
+        total: invoice!.total,
+        siteName: delivery!.siteName,
+      });
+
+      // Send email with PDF attachment
+      const emailSent = await sendEmailWithAttachment({
+        to: [client.email],
+        subject: `Facture ${invoiceNumber} - SP Logistix`,
+        body: emailBody,
+        attachmentPath: pdfPath,
+        attachmentMimeType: "application/pdf",
+      });
+
       // Save invoice to storage
       if (delivery && invoice) {
         await saveInvoice({
@@ -134,17 +171,18 @@ SP Logistix
           gst: invoice.gst,
           qst: invoice.qst,
           total: invoice.total,
-          status: "sent",
+          status: emailSent ? "sent" : "draft",
         });
-
-        if (Platform.OS !== "web") {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-
-        Alert.alert("Succès", "Facture envoyée avec succès!");
-        router.back();
       }
+
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+
+      Alert.alert("Succès", "Facture envoyée avec succès!");
+      router.back();
     } catch (error) {
+      console.error("Error sending invoice:", error);
       Alert.alert("Erreur", "Impossible d'envoyer la facture.");
     }
   };
