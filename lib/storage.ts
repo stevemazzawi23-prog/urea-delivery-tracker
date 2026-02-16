@@ -250,20 +250,10 @@ export async function getDeliveriesByClient(clientId: string): Promise<Delivery[
 
 // Invoice Pricing Constants
 export const INVOICE_CONFIG = {
+  PRICE_PER_LITER: 2.0,
   GST_RATE: 0.05,
   QST_RATE: 0.09975,
 };
-
-// Get price per liter based on volume
-function getPricePerLiter(litersDelivered: number): number {
-  if (litersDelivered >= 500) {
-    return 1.50;
-  } else if (litersDelivered >= 200) {
-    return 2.175; // Average of 1.90 and 2.45
-  } else {
-    return 2.70; // Average of 2.50 and 2.90
-  }
-}
 
 // Get service fee based on volume
 function getServiceFee(litersDelivered: number): number {
@@ -272,9 +262,8 @@ function getServiceFee(litersDelivered: number): number {
 
 // Invoice calculation function
 export function calculateInvoice(litersDelivered: number) {
-  const pricePerLiter = getPricePerLiter(litersDelivered);
   const serviceFee = getServiceFee(litersDelivered);
-  const deliveryCost = litersDelivered * pricePerLiter;
+  const deliveryCost = litersDelivered * INVOICE_CONFIG.PRICE_PER_LITER;
   const subtotal = serviceFee + deliveryCost;
   const gst = subtotal * INVOICE_CONFIG.GST_RATE;
   const qst = subtotal * INVOICE_CONFIG.QST_RATE;
@@ -282,7 +271,7 @@ export function calculateInvoice(litersDelivered: number) {
   
   return {
     serviceFee,
-    pricePerLiter,
+    pricePerLiter: INVOICE_CONFIG.PRICE_PER_LITER,
     deliveryCost,
     subtotal: Math.round(subtotal * 100) / 100,
     gst: Math.round(gst * 100) / 100,
