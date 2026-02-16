@@ -108,7 +108,10 @@ export default function ClientsScreen() {
           <Text className="text-sm text-muted mb-1">{item.company}</Text>
         ) : null}
         {item.phone ? (
-          <Text className="text-sm text-muted">{item.phone}</Text>
+          <Text className="text-sm text-muted mb-1">{item.phone}</Text>
+        ) : null}
+        {item.email ? (
+          <Text className="text-sm text-primary">{item.email}</Text>
         ) : null}
       </View>
     </TouchableOpacity>

@@ -12,6 +12,7 @@ export default function AddClientScreen() {
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -26,6 +27,7 @@ export default function AddClientScreen() {
         name: name.trim(),
         company: company.trim(),
         phone: phone.trim(),
+        email: email.trim(),
         address: address.trim(),
         notes: notes.trim(),
       });
@@ -108,6 +110,19 @@ export default function AddClientScreen() {
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
+              returnKeyType="next"
+            />
+          </View>
+
+          <View className="mb-6">
+            <Text className="text-sm font-medium text-muted mb-2">Email</Text>
+            <TextInput
+              className="bg-surface rounded-xl px-4 py-3 text-foreground border border-border text-base"
+              placeholder="Adresse email"
+              placeholderTextColor={colors.muted}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
               returnKeyType="next"
             />
           </View>

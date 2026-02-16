@@ -112,3 +112,9 @@
 - [x] Calculate total liters from all units
 - [x] Include units breakdown in delivery report
 - [x] Display units details in delivery history
+
+
+## Email Display in Client Cards
+- [x] Add email field to client list cards
+- [x] Display email icon with client contact info
+- [x] Add email editing capability in client detail screen
