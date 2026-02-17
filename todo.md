@@ -171,3 +171,9 @@
 - [x] Display equipment list in client detail screen
 - [x] Fix equipment saving to AsyncStorage
 - [x] Add capacity validation alert during delivery - warn user if liters exceed equipment capacity
+
+## Navigation Bar
+- [x] Add navigation bar to all pages in the app
+- [x] Create shared layout with tab navigation for all detail pages
+- [x] Hide detail pages from tab bar while keeping them accessible
+- [x] Test navigation bar visibility across all pages
