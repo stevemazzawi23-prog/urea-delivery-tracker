@@ -226,5 +226,5 @@
 
 
 ## Bug Fixes - Invoice Display
-- [x] Fix PDF generation - PDF not opening in correct format (opening in Google Docs)
-- [x] Use proper PDF library to generate real PDF files
+- [x] Fix PDF generation - still not opening correctly
+- [x] Use server-side PDF generation with proper library

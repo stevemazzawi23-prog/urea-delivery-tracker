@@ -5,6 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { deliveryRouter } from "./routers-delivery";
 import { pdfRouter } from "./routers-pdf";
 import { invoicePdfRouter } from "./routers-invoice-pdf";
+import { invoicePdfRouter as invoicePdfServerRouter } from "./routers-invoice-pdf-server";
 
 export const appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -23,6 +24,7 @@ export const appRouter = router({
   delivery: deliveryRouter,
   pdf: pdfRouter,
   invoicePdf: invoicePdfRouter,
+  invoicePdfServer: invoicePdfServerRouter,
 });
 
 export type AppRouter = typeof appRouter;
