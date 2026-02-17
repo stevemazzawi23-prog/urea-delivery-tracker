@@ -215,3 +215,7 @@
 - [x] Integrate HTML to PDF conversion API
 - [x] Create server endpoint for PDF generation
 - [x] Update invoice generation to use PDF API
+
+
+## Bug Fixes
+- [x] Fix invoice HTML rendering - display as PDF instead of raw code
