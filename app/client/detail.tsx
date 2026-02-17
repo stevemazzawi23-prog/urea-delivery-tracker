@@ -20,7 +20,7 @@ import { getClients, getSitesByClient, deleteSite, type Site, getEquipment, upda
 export default function ClientDetailScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { id: clientId } = useLocalSearchParams<{ id: string }>();
+  const { clientId } = useLocalSearchParams<{ clientId: string }>();
   
   const [client, setClient] = useState<any>(null);
   const [sites, setSites] = useState<Site[]>([]);
