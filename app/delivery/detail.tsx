@@ -188,6 +188,29 @@ Généré le ${new Date().toLocaleString("fr-CA")}
             <Text className="text-white text-lg mt-1">litres</Text>
           </View>
 
+          {/* Create Invoice Button */}
+          <TouchableOpacity
+            onPress={() => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push({
+                pathname: "/invoice/create",
+                params: { deliveryId: delivery.id },
+              });
+            }}
+            style={{
+              backgroundColor: colors.primary,
+              paddingVertical: 14,
+              borderRadius: 12,
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+            activeOpacity={0.8}
+          >
+            <Text className="text-white text-base font-semibold">Creer/Regenerer Facture</Text>
+          </TouchableOpacity>
+
           {/* Share Button */}
           <TouchableOpacity
             onPress={handleShare}
