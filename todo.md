@@ -205,3 +205,7 @@
 ## Logo and Branding
 - [x] Generate professional SP Logistix logo
 - [x] Add logo to invoice header
+
+## Logo and Branding Updates
+- [x] Replace logo with official SP Logistix logo on invoice
+- [x] Change invoice color scheme to green theme

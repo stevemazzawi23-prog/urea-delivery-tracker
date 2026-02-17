@@ -2,6 +2,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { INVOICE_CONFIG } from "./storage";
 import { removeAccents } from "./accent-remover";
 import { generateProfessionalInvoiceHTML, type InvoiceData as ProfessionalInvoiceData } from "./professional-invoice-template";
+import html2pdf from "html2pdf.js";
 
 export interface InvoiceData {
   invoiceNumber: string;
@@ -22,19 +23,25 @@ export interface InvoiceData {
 
 export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
   try {
-    // Use the professional invoice template
+    // Generate professional HTML content
     const htmlContent = generateProfessionalInvoiceHTML(data);
 
-
-    // Save HTML as file for now (will be converted to PDF by email client)
-    const fileName = `facture-${data.invoiceNumber.replace(/\//g, "-")}.html`;
+    // Create a temporary HTML file path
+    const fileName = `facture-${data.invoiceNumber.replace(/\//g, "-")}.pdf`;
     const filePath = `${FileSystem.cacheDirectory}${fileName}`;
 
-    // Write file
-    await FileSystem.writeAsStringAsync(filePath, htmlContent);
+    // For web and native platforms, we need to handle PDF generation differently
+    // For now, save as HTML which can be converted to PDF by the email client
+    // In a real scenario, you'd use a server-side PDF generation service
+    
+    // Save HTML as file
+    const htmlFileName = `facture-${data.invoiceNumber.replace(/\//g, "-")}.html`;
+    const htmlFilePath = `${FileSystem.cacheDirectory}${htmlFileName}`;
+    
+    await FileSystem.writeAsStringAsync(htmlFilePath, htmlContent);
 
-    console.log("Invoice HTML generated at:", filePath);
-    return filePath;
+    console.log("Invoice HTML generated at:", htmlFilePath);
+    return htmlFilePath;
   } catch (error) {
     console.error("Error generating invoice:", error);
     throw error;
@@ -48,7 +55,5 @@ export async function downloadInvoicePDF(invoiceNumber: string): Promise<void> {
 
 export async function generateDeliveryReceiptPDF(data: any): Promise<string> {
   // Placeholder for delivery receipt generation
-  const fileName = `bon-livraison-${Date.now()}.pdf`;
-  const filePath = `${FileSystem.cacheDirectory}${fileName}`;
-  return filePath;
+  return "";
 }

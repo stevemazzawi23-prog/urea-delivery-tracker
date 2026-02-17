@@ -62,13 +62,13 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
     
     /* Header Section */
     .header {
-      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
       color: white;
       padding: 40px 50px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      border-bottom: 5px solid #f39c12;
+      border-bottom: 5px solid #558b2f;
       gap: 30px;
     }
     
@@ -87,6 +87,7 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
       font-weight: 700;
       margin-bottom: 5px;
       letter-spacing: 1px;
+      color: #ffffff;
     }
     
     .company-info p {
@@ -137,12 +138,12 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
     .section-title {
       font-size: 11px;
       font-weight: 700;
-      color: #1e3c72;
+      color: #1b5e20;
       text-transform: uppercase;
       letter-spacing: 2px;
       margin-bottom: 15px;
       padding-bottom: 10px;
-      border-bottom: 2px solid #e0e0e0;
+      border-bottom: 2px solid #c8e6c9;
     }
     
     .client-info {
@@ -154,7 +155,7 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
     .client-name {
       font-size: 16px;
       font-weight: 700;
-      color: #1e3c72;
+      color: #1b5e20;
       margin-bottom: 5px;
     }
     
@@ -181,9 +182,9 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
     }
     
     thead {
-      background: #f0f4f8;
-      border-top: 2px solid #1e3c72;
-      border-bottom: 2px solid #1e3c72;
+      background: #e8f5e9;
+      border-top: 2px solid #1b5e20;
+      border-bottom: 2px solid #1b5e20;
     }
     
     th {
@@ -191,7 +192,7 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
       text-align: left;
       font-size: 12px;
       font-weight: 700;
-      color: #1e3c72;
+      color: #1b5e20;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -212,7 +213,7 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
     }
     
     tbody tr:last-child td {
-      border-bottom: 2px solid #1e3c72;
+      border-bottom: 2px solid #1b5e20;
     }
     
     /* Totals Section */
@@ -241,7 +242,7 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
     }
     
     .total-row.final {
-      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
       color: white;
       padding: 15px;
       margin: 15px -15px 0 -15px;
@@ -270,12 +271,12 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
     
     /* Notes Section */
     .notes-section {
-      background: #f0f4f8;
+      background: #e8f5e9;
       padding: 15px;
-      border-left: 4px solid #f39c12;
+      border-left: 4px solid #2e7d32;
       margin-bottom: 20px;
       font-size: 12px;
-      color: #555;
+      color: #1b5e20;
       line-height: 1.6;
     }
     
@@ -300,7 +301,7 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
     
     .footer-company {
       font-weight: 600;
-      color: #1e3c72;
+      color: #1b5e20;
       margin-bottom: 3px;
     }
     
@@ -310,7 +311,7 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
     
     .payment-status {
       display: inline-block;
-      background: #27ae60;
+      background: #2e7d32;
       color: white;
       padding: 4px 10px;
       border-radius: 3px;
