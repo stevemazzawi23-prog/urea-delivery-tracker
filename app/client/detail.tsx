@@ -32,25 +32,45 @@ export default function ClientDetailScreen() {
   const [showAddSiteModal, setShowAddSiteModal] = useState(false);
   const [newSiteName, setNewSiteName] = useState("");
   const [newSiteAddress, setNewSiteAddress] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadData = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
     try {
+      if (!clientId) {
+        setLoadError("Client ID not found");
+        setIsLoading(false);
+        return;
+      }
+      
       const clients = await getClients();
       const foundClient = clients.find((c) => c.id === clientId);
-      if (foundClient) {
-        setClient(foundClient);
-        const sitesData = await getSitesByClient(clientId || "");
-        setSites(sitesData);
-        
-        const equipment = await getEquipment();
-        setAllEquipment(equipment);
-        
-        const clientEquipmentIds = foundClient.equipmentIds || [];
-        const clientEquip = equipment.filter((eq) => clientEquipmentIds.includes(eq.id));
-        setClientEquipment(clientEquip);
+      
+      if (!foundClient) {
+        setLoadError("Client not found");
+        setIsLoading(false);
+        return;
       }
+      
+      setClient(foundClient);
+      
+      const sitesData = await getSitesByClient(clientId);
+      setSites(sitesData);
+      
+      const equipment = await getEquipment();
+      setAllEquipment(equipment);
+      
+      const clientEquipmentIds = foundClient.equipmentIds || [];
+      const clientEquip = equipment.filter((eq) => clientEquipmentIds.includes(eq.id));
+      setClientEquipment(clientEquip);
+      
+      setIsLoading(false);
     } catch (error) {
       console.error("Error loading data:", error);
+      setLoadError("Error loading client data");
+      setIsLoading(false);
     }
   }, [clientId]);
 
@@ -219,11 +239,33 @@ export default function ClientDetailScreen() {
     </TouchableOpacity>
   );
 
-  if (!client) {
+  if (isLoading) {
     return (
       <ScreenContainer>
         <View className="flex-1 items-center justify-center">
           <Text className="text-muted">Chargement...</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+  
+  if (loadError || !client) {
+    return (
+      <ScreenContainer className="p-4">
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-error text-lg font-semibold mb-4">Erreur</Text>
+          <Text className="text-muted text-center mb-6">{loadError || "Client not found"}</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{
+              backgroundColor: colors.primary,
+              paddingHorizontal: 24,
+              paddingVertical: 12,
+              borderRadius: 8,
+            }}
+          >
+            <Text className="text-white font-semibold">Retour</Text>
+          </TouchableOpacity>
         </View>
       </ScreenContainer>
     );
