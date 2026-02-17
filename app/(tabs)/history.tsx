@@ -1,4 +1,3 @@
-import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,33 +6,42 @@ import {
   Alert,
   RefreshControl,
   Platform,
+  ScrollView,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { getDeliveries, deleteDelivery, type Delivery } from "@/lib/storage";
+import { getDeliveries, deleteDelivery, getInvoices, deleteInvoice, type Delivery, type Invoice } from "@/lib/storage";
+import { useState, useCallback } from "react";
+
+type TabType = "deliveries" | "invoices";
 
 export default function HistoryScreen() {
   const colors = useColors();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<TabType>("deliveries");
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadDeliveries = async () => {
-    const data = await getDeliveries();
-    setDeliveries(data.sort((a, b) => b.createdAt - a.createdAt));
+  const loadData = async () => {
+    const deliveriesData = await getDeliveries();
+    setDeliveries(deliveriesData.sort((a, b) => b.createdAt - a.createdAt));
+    
+    const invoicesData = await getInvoices();
+    setInvoices(invoicesData.sort((a, b) => b.createdAt - a.createdAt));
   };
 
   useFocusEffect(
     useCallback(() => {
-      loadDeliveries();
+      loadData();
     }, [])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadDeliveries();
+    await loadData();
     setRefreshing(false);
   };
 
@@ -48,7 +56,28 @@ export default function HistoryScreen() {
           style: "destructive",
           onPress: async () => {
             await deleteDelivery(delivery.id);
-            await loadDeliveries();
+            await loadData();
+            if (Platform.OS !== "web") {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteInvoice = (invoice: Invoice) => {
+    Alert.alert(
+      "Supprimer la facture",
+      "Voulez-vous vraiment supprimer cette facture?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            await deleteInvoice(invoice.id);
+            await loadData();
             if (Platform.OS !== "web") {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
@@ -99,6 +128,18 @@ export default function HistoryScreen() {
     return groups;
   };
 
+  const groupInvoicesByDate = () => {
+    const groups: { [key: string]: Invoice[] } = {};
+    invoices.forEach((invoice) => {
+      const dateKey = formatDate(invoice.createdAt);
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(invoice);
+    });
+    return groups;
+  };
+
   const renderDelivery = ({ item }: { item: Delivery }) => (
     <TouchableOpacity
       onPress={() => {
@@ -114,33 +155,40 @@ export default function HistoryScreen() {
       style={{ opacity: 1 }}
       activeOpacity={0.7}
     >
-      <View className="bg-surface rounded-xl p-4 mb-3 border border-border">
-        <View className="flex-row justify-between items-start mb-2">
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-foreground">{item.clientName}</Text>
-            {item.clientCompany ? (
-              <Text className="text-sm text-muted">{item.clientCompany}</Text>
-            ) : null}
-            {item.siteName ? (
-              <Text className="text-xs text-muted mt-1">{item.siteName}</Text>
-            ) : null}
+      <View style={{
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+      }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>{item.clientName}</Text>
+            {item.clientCompany && (
+              <Text style={{ fontSize: 12, color: colors.muted }}>{item.clientCompany}</Text>
+            )}
+            {item.siteName && (
+              <Text style={{ fontSize: 11, color: colors.muted, marginTop: 4 }}>{item.siteName}</Text>
+            )}
           </View>
-          <View className="items-end">
-            <Text className="text-2xl font-bold text-primary">{item.litersDelivered}</Text>
-            <Text className="text-xs text-muted">litres</Text>
+          <View style={{ alignItems: "flex-end" }}>
+            <Text style={{ fontSize: 24, fontWeight: "bold", color: colors.primary }}>{item.litersDelivered}</Text>
+            <Text style={{ fontSize: 10, color: colors.muted }}>litres</Text>
           </View>
         </View>
-        <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-sm text-muted">{formatTime(item.startTime)}</Text>
-          <Text className="text-sm text-muted">
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <Text style={{ fontSize: 12, color: colors.muted }}>{formatTime(item.startTime)}</Text>
+          <Text style={{ fontSize: 12, color: colors.muted }}>
             {formatDuration(item.startTime, item.endTime)}
           </Text>
         </View>
         {item.units && item.units.length > 0 && (
-          <View className="bg-background rounded-lg p-2 mt-2">
-            <Text className="text-xs text-muted mb-1">Details:</Text>
+          <View style={{ backgroundColor: colors.background, borderRadius: 8, padding: 8, marginTop: 8 }}>
+            <Text style={{ fontSize: 11, color: colors.muted, marginBottom: 4 }}>Détails:</Text>
             {item.units.map((unit) => (
-              <Text key={unit.id} className="text-xs text-foreground">
+              <Text key={unit.id} style={{ fontSize: 11, color: colors.foreground }}>
                 {unit.unitName}: {unit.liters}L
               </Text>
             ))}
@@ -150,45 +198,185 @@ export default function HistoryScreen() {
     </TouchableOpacity>
   );
 
+  const renderInvoice = ({ item }: { item: Invoice }) => (
+    <TouchableOpacity
+      onLongPress={() => handleDeleteInvoice(item)}
+      style={{ opacity: 1 }}
+      activeOpacity={0.7}
+    >
+      <View style={{
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+      }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>{item.clientName}</Text>
+            <Text style={{ fontSize: 12, color: colors.muted }}>Facture #{item.invoiceNumber}</Text>
+            {item.clientEmail && (
+              <Text style={{ fontSize: 11, color: colors.muted, marginTop: 4 }}>{item.clientEmail}</Text>
+            )}
+          </View>
+          <View style={{ alignItems: "flex-end" }}>
+            <Text style={{ fontSize: 20, fontWeight: "bold", color: colors.primary }}>${item.total.toFixed(2)}</Text>
+            <Text style={{ 
+              fontSize: 10, 
+              paddingHorizontal: 8, 
+              paddingVertical: 2, 
+              borderRadius: 4,
+              backgroundColor: item.status === 'paid' ? '#22C55E' : item.status === 'sent' ? '#3B82F6' : '#9CA3AF',
+              color: '#fff',
+              marginTop: 4,
+              overflow: 'hidden'
+            }}>
+              {item.status === 'paid' ? 'Payée' : item.status === 'sent' ? 'Envoyée' : 'Brouillon'}
+            </Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={{ fontSize: 12, color: colors.muted }}>{item.litersDelivered}L @ ${item.pricePerLiter.toFixed(2)}/L</Text>
+          <Text style={{ fontSize: 12, color: colors.muted }}>{formatDate(item.createdAt)}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
   const groupedDeliveries = groupDeliveriesByDate();
-  const dateKeys = Object.keys(groupedDeliveries);
+  const deliveryDateKeys = Object.keys(groupedDeliveries);
+  
+  const groupedInvoices = groupInvoicesByDate();
+  const invoiceDateKeys = Object.keys(groupedInvoices);
 
   return (
     <ScreenContainer>
-      <View className="flex-1 px-4 pt-4">
+      <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 16 }}>
         {/* Header */}
-        <View className="mb-4">
-          <Text className="text-3xl font-bold text-foreground">Historique</Text>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ fontSize: 28, fontWeight: "bold", color: colors.foreground }}>Historique</Text>
         </View>
 
-        {/* Delivery List */}
-        <FlatList
-          data={dateKeys}
-          keyExtractor={(item) => item}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-            />
-          }
-          renderItem={({ item: dateKey }) => (
-            <View className="mb-6">
-              <Text className="text-sm font-semibold text-muted mb-3 uppercase">{dateKey}</Text>
-              {groupedDeliveries[dateKey].map((delivery) => (
-                <View key={delivery.id}>{renderDelivery({ item: delivery })}</View>
-              ))}
-            </View>
-          )}
-          ListEmptyComponent={
-            <View className="items-center justify-center py-12">
-              <Text className="text-muted text-center text-base">
-                Aucune livraison enregistrée
-              </Text>
-            </View>
-          }
-        />
+        {/* Tab Buttons */}
+        <View style={{ flexDirection: "row", marginBottom: 16, gap: 8 }}>
+          <TouchableOpacity
+            onPress={() => {
+              setActiveTab("deliveries");
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+            }}
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              borderRadius: 8,
+              backgroundColor: activeTab === "deliveries" ? colors.primary : colors.surface,
+              borderWidth: 1,
+              borderColor: activeTab === "deliveries" ? colors.primary : colors.border,
+            }}
+          >
+            <Text style={{
+              fontSize: 14,
+              fontWeight: "600",
+              color: activeTab === "deliveries" ? "#fff" : colors.foreground,
+              textAlign: "center",
+            }}>
+              📦 Billets ({deliveries.length})
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={() => {
+              setActiveTab("invoices");
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+            }}
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              borderRadius: 8,
+              backgroundColor: activeTab === "invoices" ? colors.primary : colors.surface,
+              borderWidth: 1,
+              borderColor: activeTab === "invoices" ? colors.primary : colors.border,
+            }}
+          >
+            <Text style={{
+              fontSize: 14,
+              fontWeight: "600",
+              color: activeTab === "invoices" ? "#fff" : colors.foreground,
+              textAlign: "center",
+            }}>
+              📄 Factures ({invoices.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Content */}
+        {activeTab === "deliveries" ? (
+          <FlatList
+            data={deliveryDateKeys}
+            keyExtractor={(item) => item}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+              />
+            }
+            renderItem={({ item: dateKey }) => (
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 12, textTransform: "uppercase" }}>
+                  {dateKey}
+                </Text>
+                {groupedDeliveries[dateKey].map((delivery) => (
+                  <View key={delivery.id}>{renderDelivery({ item: delivery })}</View>
+                ))}
+              </View>
+            )}
+            ListEmptyComponent={
+              <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 48 }}>
+                <Text style={{ color: colors.muted, textAlign: "center", fontSize: 16 }}>
+                  Aucun billet de livraison
+                </Text>
+              </View>
+            }
+          />
+        ) : (
+          <FlatList
+            data={invoiceDateKeys}
+            keyExtractor={(item) => item}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+              />
+            }
+            renderItem={({ item: dateKey }) => (
+              <View style={{ marginBottom: 24 }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 12, textTransform: "uppercase" }}>
+                  {dateKey}
+                </Text>
+                {groupedInvoices[dateKey].map((invoice) => (
+                  <View key={invoice.id}>{renderInvoice({ item: invoice })}</View>
+                ))}
+              </View>
+            )}
+            ListEmptyComponent={
+              <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 48 }}>
+                <Text style={{ color: colors.muted, textAlign: "center", fontSize: 16 }}>
+                  Aucune facture
+                </Text>
+              </View>
+            }
+          />
+        )}
       </View>
     </ScreenContainer>
   );

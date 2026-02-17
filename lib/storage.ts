@@ -333,6 +333,17 @@ export async function updateInvoiceStatus(invoiceId: string, status: Invoice['st
   }
 }
 
+export async function deleteInvoice(invoiceId: string): Promise<void> {
+  try {
+    const invoices = await getInvoices();
+    const filtered = invoices.filter((inv) => inv.id !== invoiceId);
+    await AsyncStorage.setItem(INVOICES_KEY, JSON.stringify(filtered));
+  } catch (error) {
+    console.error("Error deleting invoice:", error);
+    throw error;
+  }
+}
+
 
 // Storage Keys
 const DRIVERS_KEY = "drivers";
