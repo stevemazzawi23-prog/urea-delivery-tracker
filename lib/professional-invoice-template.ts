@@ -1,4 +1,5 @@
 import { removeAccents } from "./accent-remover";
+import { LOGO_SVG } from "./logo-config";
 
 export interface InvoiceData {
   invoiceNumber: string;
@@ -68,6 +69,17 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
       justify-content: space-between;
       align-items: flex-start;
       border-bottom: 5px solid #f39c12;
+      gap: 30px;
+    }
+    
+    .logo-section {
+      flex-shrink: 0;
+    }
+    
+    .logo-section svg {
+      width: 80px;
+      height: 80px;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
     }
     
     .company-info h1 {
@@ -324,6 +336,9 @@ export function generateProfessionalInvoiceHTML(data: InvoiceData): string {
   <div class="invoice-container">
     <!-- Header -->
     <div class="header">
+      <div class="logo-section">
+        ${LOGO_SVG}
+      </div>
       <div class="company-info">
         <h1>SP LOGISTIX</h1>
         <p>Livraison d'uree professionnelle</p>

@@ -201,3 +201,7 @@
 - [x] Redesign invoice with professional premium layout
 - [x] Add better spacing, typography and visual hierarchy
 - [x] Implement modern color scheme and styling
+
+## Logo and Branding
+- [x] Generate professional SP Logistix logo
+- [x] Add logo to invoice header
