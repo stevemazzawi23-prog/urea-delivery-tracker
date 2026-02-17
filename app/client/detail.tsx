@@ -210,25 +210,29 @@ export default function ClientDetailScreen() {
               <Text className="text-xl font-bold text-foreground">Équipements</Text>
               <TouchableOpacity
                 onPress={() => {
+                  console.log("Add equipment button pressed");
                   if (Platform.OS !== "web") {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }
+                  const options = allEquipment.map((eq) => ({
+                    text: eq.name,
+                    onPress: async () => {
+                      console.log("Selected equipment:", eq.name);
+                      const newIds = [...(client.equipmentIds || []), eq.id];
+                      const uniqueIds = [...new Set(newIds)];
+                      await updateClientEquipment(clientId || "", uniqueIds);
+                      await loadData();
+                      if (Platform.OS !== "web") {
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      }
+                    },
+                  }));
+                  
                   Alert.alert(
                     "Ajouter des équipements",
                     "Sélectionnez les équipements pour ce client",
                     [
-                      ...allEquipment.map((eq) => ({
-                        text: eq.name,
-                        onPress: async () => {
-                          const newIds = [...(client.equipmentIds || []), eq.id];
-                          const uniqueIds = [...new Set(newIds)];
-                          await updateClientEquipment(clientId || "", uniqueIds);
-                          await loadData();
-                          if (Platform.OS !== "web") {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          }
-                        },
-                      })),
+                      ...options,
                       { text: "Annuler", style: "cancel" },
                     ]
                   );
