@@ -219,3 +219,7 @@
 
 ## Bug Fixes
 - [x] Fix invoice HTML rendering - display as PDF instead of raw code
+
+
+## Invoice Template Variations
+- [x] Create simplified invoice template without logo

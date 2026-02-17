@@ -3,7 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
 import { INVOICE_CONFIG } from "./storage";
 import { removeAccents } from "./accent-remover";
-import { generateProfessionalInvoiceHTML, type InvoiceData as ProfessionalInvoiceData } from "./professional-invoice-template";
+import { generateSimplifiedInvoiceHTML } from "./simplified-invoice-template";
 
 export interface InvoiceData {
   invoiceNumber: string;
@@ -24,8 +24,8 @@ export interface InvoiceData {
 
 export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
   try {
-    // Generate professional HTML content
-    const htmlContent = generateProfessionalInvoiceHTML(data);
+    // Generate simplified HTML content (without logo)
+    const htmlContent = generateSimplifiedInvoiceHTML(data);
 
     // Create filename
     const fileName = `facture-${data.invoiceNumber.replace(/\//g, "-")}.html`;
