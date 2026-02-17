@@ -226,4 +226,4 @@
 
 
 ## Bug Fixes - Invoice Display
-- [x] Fix invoice HTML rendering - displaying raw code instead of rendered HTML
+- [x] Fix invoice HTML rendering - displaying raw code instead of rendered HTML (using data URI approach)
