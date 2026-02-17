@@ -226,5 +226,5 @@
 
 
 ## Bug Fixes - Invoice Display
-- [x] Convert invoice from HTML to PDF format
-- [x] Generate PDF files instead of HTML files
+- [x] Fix PDF generation - PDF not opening in correct format (opening in Google Docs)
+- [x] Use proper PDF library to generate real PDF files

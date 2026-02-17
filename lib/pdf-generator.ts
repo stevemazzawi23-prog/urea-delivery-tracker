@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 import { INVOICE_CONFIG } from "./storage";
 import { removeAccents } from "./accent-remover";
 import { generateSimplifiedInvoiceHTML } from "./simplified-invoice-template";
+import { generateSimplePDFInvoice } from "./simple-pdf-generator";
 
 export interface InvoiceData {
   invoiceNumber: string;
@@ -24,19 +25,18 @@ export interface InvoiceData {
 
 export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
   try {
-    // Generate simplified HTML content (without logo)
-    const htmlContent = generateSimplifiedInvoiceHTML(data);
-
-    // Create filename with .pdf extension
-    const fileName = `facture-${data.invoiceNumber.replace(/\//g, "-")}.pdf`;
-    const filePath = `${FileSystem.cacheDirectory}${fileName}`;
-
-    // For now, save as HTML but with PDF intention
-    // Client-side will convert to PDF using html2pdf
-    await FileSystem.writeAsStringAsync(filePath, htmlContent);
-
-    console.log("Invoice PDF generated at:", filePath);
-    return filePath;
+    if (Platform.OS === "web") {
+      // For web, use html2pdf to generate PDF
+      await generateSimplePDFInvoice(data);
+      return "pdf-generated";
+    } else {
+      // For mobile, generate HTML and save
+      const htmlContent = generateSimplifiedInvoiceHTML(data);
+      const fileName = `facture-${data.invoiceNumber.replace(/\//g, "-")}.pdf`;
+      const filePath = `${FileSystem.cacheDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(filePath, htmlContent);
+      return filePath;
+    }
   } catch (error) {
     console.error("Error generating invoice:", error);
     throw error;
@@ -46,27 +46,9 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
 export async function openInvoicePDF(filePath: string): Promise<void> {
   try {
     if (Platform.OS === "web") {
-      // For web, use html2pdf to convert and download
-      const htmlContent = await fetch(filePath).then(r => r.text());
-      
-      // Dynamically load html2pdf
-      const html2pdf = (window as any).html2pdf;
-      if (html2pdf) {
-        const element = document.createElement("div");
-        element.innerHTML = htmlContent;
-        
-        html2pdf().set({
-          margin: 10,
-          filename: `facture-${new Date().getTime()}.pdf`,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { orientation: "portrait", unit: "mm", format: "a4" },
-        }).save();
-      } else {
-        // Fallback: open as data URI
-        const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
-        window.open(dataUri, "_blank");
-      }
+      // For web, the PDF is already downloaded by generateInvoicePDF
+      // Just open it in a new tab if needed
+      window.open(filePath, "_blank");
     } else {
       // For mobile, use WebBrowser
       await WebBrowser.openBrowserAsync(`file://${filePath}`);
