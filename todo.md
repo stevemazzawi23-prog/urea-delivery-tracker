@@ -226,4 +226,5 @@
 
 
 ## Bug Fixes - Invoice Display
-- [x] Fix invoice HTML rendering - displaying raw code instead of rendered HTML (using data URI approach)
+- [x] Convert invoice from HTML to PDF format
+- [x] Generate PDF files instead of HTML files

@@ -27,14 +27,15 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
     // Generate simplified HTML content (without logo)
     const htmlContent = generateSimplifiedInvoiceHTML(data);
 
-    // Create filename
-    const fileName = `facture-${data.invoiceNumber.replace(/\//g, "-")}.html`;
+    // Create filename with .pdf extension
+    const fileName = `facture-${data.invoiceNumber.replace(/\//g, "-")}.pdf`;
     const filePath = `${FileSystem.cacheDirectory}${fileName}`;
 
-    // Save HTML to file
+    // For now, save as HTML but with PDF intention
+    // Client-side will convert to PDF using html2pdf
     await FileSystem.writeAsStringAsync(filePath, htmlContent);
 
-    console.log("Invoice HTML generated at:", filePath);
+    console.log("Invoice PDF generated at:", filePath);
     return filePath;
   } catch (error) {
     console.error("Error generating invoice:", error);
@@ -45,14 +46,26 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
 export async function openInvoicePDF(filePath: string): Promise<void> {
   try {
     if (Platform.OS === "web") {
-      // For web, read the file and create a data URI
-      try {
-        const fileContent = await fetch(filePath).then(r => r.text());
-        const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(fileContent)}`;
+      // For web, use html2pdf to convert and download
+      const htmlContent = await fetch(filePath).then(r => r.text());
+      
+      // Dynamically load html2pdf
+      const html2pdf = (window as any).html2pdf;
+      if (html2pdf) {
+        const element = document.createElement("div");
+        element.innerHTML = htmlContent;
+        
+        html2pdf().set({
+          margin: 10,
+          filename: `facture-${new Date().getTime()}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: "portrait", unit: "mm", format: "a4" },
+        }).save();
+      } else {
+        // Fallback: open as data URI
+        const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
         window.open(dataUri, "_blank");
-      } catch (e) {
-        // Fallback: try to open directly
-        window.open(filePath, "_blank");
       }
     } else {
       // For mobile, use WebBrowser
