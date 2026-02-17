@@ -31,7 +31,18 @@ export async function sendEmailWithAttachment(options: EmailOptions): Promise<bo
     if (options.attachmentPath) {
       // For mobile, we need to use the file URI directly
       if (Platform.OS !== "web") {
-        attachments.push(options.attachmentPath);
+        // Verify the file exists before adding it
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(options.attachmentPath);
+          if (fileInfo.exists) {
+            attachments.push(options.attachmentPath);
+            console.log("Invoice PDF attached:", options.attachmentPath);
+          } else {
+            console.warn("Attachment file not found:", options.attachmentPath);
+          }
+        } catch (fileError) {
+          console.warn("Error checking attachment file:", fileError);
+        }
       } else {
         // For web, we would need to handle differently
         console.warn("Email attachment not fully supported on web");
@@ -41,9 +52,16 @@ export async function sendEmailWithAttachment(options: EmailOptions): Promise<bo
     // Add additional attachments
     if (options.additionalAttachments && options.additionalAttachments.length > 0) {
       if (Platform.OS !== "web") {
-        options.additionalAttachments.forEach((att) => {
-          attachments.push(att.path);
-        });
+        for (const att of options.additionalAttachments) {
+          try {
+            const fileInfo = await FileSystem.getInfoAsync(att.path);
+            if (fileInfo.exists) {
+              attachments.push(att.path);
+            }
+          } catch (fileError) {
+            console.warn("Error checking additional attachment:", fileError);
+          }
+        }
       }
     }
 
@@ -55,6 +73,7 @@ export async function sendEmailWithAttachment(options: EmailOptions): Promise<bo
       attachments: attachments,
     });
 
+    console.log("Email composition result:", result.status);
     return result.status === MailComposer.MailComposerStatus.SENT;
   } catch (error) {
     console.error("Error sending email:", error);
@@ -72,19 +91,19 @@ export async function generateEmailBody(invoiceData: {
   const body = `
 Bonjour ${invoiceData.clientName},
 
-Veuillez trouver ci-joint votre facture de livraison d'urée.
+Veuillez trouver ci-joint votre facture de livraison d'uree.
 
-Détails de la livraison:
-- Numéro de facture: ${invoiceData.invoiceNumber}
+Details de la livraison:
+- Numero de facture: ${invoiceData.invoiceNumber}
 - Site: ${invoiceData.siteName}
-- Quantité livrée: ${invoiceData.litersDelivered} litres
+- Quantite livree: ${invoiceData.litersDelivered} litres
 - Montant total: $${invoiceData.total.toFixed(2)}
 
 Merci de votre confiance!
 
 Cordialement,
 SP Logistix
-Livraison d'urée
+Livraison d'uree
   `.trim();
 
   return body;

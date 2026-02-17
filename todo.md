@@ -183,3 +183,6 @@
 
 ## Delivery Ticket Formatting
 - [x] Apply accent removal to delivery ticket PDF text for consistency
+
+## Email Features
+- [x] Send invoice PDF as attachment when sending invoice by email
