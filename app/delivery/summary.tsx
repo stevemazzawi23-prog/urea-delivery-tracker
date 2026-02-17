@@ -9,7 +9,7 @@ import { saveDelivery, DeliveryUnit } from "@/lib/storage";
 export default function DeliverySummaryScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { clientId, clientName, clientCompany, siteId, siteName, startTime, endTime, litersDelivered, unitsJson, photosJson } =
+  const { clientId, clientName, clientCompany, siteId, siteName, startTime, endTime, litersDelivered, unitsJson, photosJson, driverName } =
     useLocalSearchParams<{
       clientId: string;
       clientName: string;
@@ -21,6 +21,7 @@ export default function DeliverySummaryScreen() {
       litersDelivered: string;
       unitsJson?: string;
       photosJson: string;
+      driverName?: string;
     }>();
 
   const [photos, setPhotos] = useState<string[]>(photosJson ? JSON.parse(photosJson) : []);
@@ -107,6 +108,7 @@ ${"=".repeat(50)}
 CLIENT: ${clientName}
 ENTREPRISE: ${clientCompany || "N/A"}
 SITE: ${siteName}
+LIVREUR: ${driverName || "Non spécifié"}
 
 DATE: ${formatDateTime(startTimestamp)}
 DURÉE: ${formatDuration(durationSeconds)}
@@ -175,6 +177,14 @@ Rapport généré le ${new Date().toLocaleString("fr-CA")}
               </Text>
             )}
           </View>
+          {driverName && (
+            <View>
+              <Text style={{ fontSize: 12, color: colors.muted }}>Livreur</Text>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>
+                {driverName}
+              </Text>
+            </View>
+          )}
           <View>
             <Text style={{ fontSize: 12, color: colors.muted }}>Site</Text>
             <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>

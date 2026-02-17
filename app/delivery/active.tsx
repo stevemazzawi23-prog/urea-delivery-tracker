@@ -139,7 +139,7 @@ export default function ActiveDeliveryScreen() {
     }
   };
 
-  const handleStopDelivery = () => {
+  const handleStopDelivery = async () => {
     if (units.length === 0) {
       Alert.alert("Erreur", "Veuillez ajouter au moins une unité avant de terminer.");
       return;
@@ -152,6 +152,11 @@ export default function ActiveDeliveryScreen() {
     const endTime = Date.now();
     const totalLiters = units.reduce((sum, unit) => sum + unit.liters, 0);
 
+    // Get current driver name
+    const { getCurrentDriver } = await import("@/lib/storage");
+    const currentDriver = await getCurrentDriver();
+    const driverName = currentDriver?.name || "Non spécifié";
+
     router.replace({
       pathname: "/delivery/summary",
       params: {
@@ -159,6 +164,7 @@ export default function ActiveDeliveryScreen() {
         clientName,
         clientCompany,
         siteId,
+        driverName,
         siteName,
         startTime: startTime.toString(),
         endTime: endTime.toString(),
