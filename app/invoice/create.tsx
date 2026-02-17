@@ -124,37 +124,7 @@ SP Logistix
     }
 
     try {
-      // Generate invoice PDF
-      const pdfPath = await generateInvoicePDF({
-        invoiceNumber,
-        invoiceDate: Date.now(),
-        clientName: client.name,
-        clientCompany: client.company,
-        clientAddress: client.address,
-        clientEmail: client.email,
-        siteName: delivery!.siteName,
-        litersDelivered: invoice!.litersDelivered,
-        serviceFee: invoice.serviceFee,
-        pricePerLiter: invoice.pricePerLiter,
-        subtotal: invoice!.subtotal,
-        gst: invoice!.gst,
-        qst: invoice!.qst,
-        total: invoice!.total,
-      });
-
-      // Generate delivery receipt PDF
-      const receiptPath = await generateDeliveryReceiptPDF({
-        clientName: client.name,
-        clientCompany: client.company,
-        siteName: delivery!.siteName,
-        driverName: delivery!.driverName,
-        startTime: delivery!.startTime,
-        endTime: delivery!.endTime,
-        litersDelivered: delivery!.litersDelivered,
-        units: delivery!.units || [],
-      });
-
-      // Generate email body
+      // Generate email body with invoice details
       const emailBody = await generateEmailBody({
         invoiceNumber,
         clientName: client.name,
@@ -163,18 +133,11 @@ SP Logistix
         siteName: delivery!.siteName,
       });
 
-      // Send email with both invoice and receipt attachments
+      // Send email without attachments first (simpler approach)
       const emailSent = await sendEmailWithAttachment({
         to: [client.email],
         subject: `Facture ${invoiceNumber} - SP Logistix`,
         body: emailBody,
-        attachmentPath: pdfPath,
-        attachmentMimeType: "application/pdf",
-        additionalAttachments: [{
-          path: receiptPath,
-          mimeType: "application/pdf",
-          filename: "billet-de-livraison.pdf"
-        }],
       });
 
       // Save invoice to storage
