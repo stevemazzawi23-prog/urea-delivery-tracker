@@ -482,3 +482,34 @@ export async function setCurrentDriver(driver: Driver | null): Promise<void> {
     throw error;
   }
 }
+
+
+// Invoice Status Management Functions
+export async function getUnpaidInvoices(): Promise<Invoice[]> {
+  try {
+    const invoices = await getInvoices();
+    return invoices.filter((inv) => inv.status !== 'paid');
+  } catch (error) {
+    console.error("Error getting unpaid invoices:", error);
+    return [];
+  }
+}
+
+export async function getOverdueInvoices(daysOverdue: number = 10): Promise<Invoice[]> {
+  try {
+    const invoices = await getInvoices();
+    const cutoffDate = Date.now() - (daysOverdue * 24 * 60 * 60 * 1000);
+    return invoices.filter((inv) => inv.status !== 'paid' && inv.invoiceDate < cutoffDate);
+  } catch (error) {
+    console.error("Error getting overdue invoices:", error);
+    return [];
+  }
+}
+
+export async function markInvoiceAsPaid(invoiceId: string): Promise<void> {
+  await updateInvoiceStatus(invoiceId, 'paid');
+}
+
+export async function markInvoiceAsUnpaid(invoiceId: string): Promise<void> {
+  await updateInvoiceStatus(invoiceId, 'sent');
+}

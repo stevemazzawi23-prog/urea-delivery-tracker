@@ -12,7 +12,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { getDeliveries, deleteDelivery, getInvoices, deleteInvoice, type Delivery, type Invoice } from "@/lib/storage";
+import { getDeliveries, deleteDelivery, getInvoices, deleteInvoice, updateInvoiceStatus, type Delivery, type Invoice } from "@/lib/storage";
 import { useState, useCallback } from "react";
 
 type TabType = "deliveries" | "invoices";
@@ -85,6 +85,33 @@ export default function HistoryScreen() {
         },
       ]
     );
+  };
+
+  const handleChangeInvoiceStatus = (invoice: Invoice) => {
+    const options = [
+      { text: "Annuler", style: "cancel" as const },
+      {
+        text: "Marquer comme Payée",
+        onPress: async () => {
+          await updateInvoiceStatus(invoice.id, 'paid');
+          await loadData();
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+        },
+      },
+      {
+        text: "Marquer comme Impayée",
+        onPress: async () => {
+          await updateInvoiceStatus(invoice.id, 'sent');
+          await loadData();
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+        },
+      },
+    ];
+    Alert.alert("Changer le statut", "Sélectionnez le nouveau statut", options);
   };
 
   const formatDate = (timestamp: number) => {
@@ -200,6 +227,7 @@ export default function HistoryScreen() {
 
   const renderInvoice = ({ item }: { item: Invoice }) => (
     <TouchableOpacity
+      onPress={() => handleChangeInvoiceStatus(item)}
       onLongPress={() => handleDeleteInvoice(item)}
       style={{ opacity: 1 }}
       activeOpacity={0.7}
