@@ -24,6 +24,7 @@ export interface Client {
   address: string;
   email?: string;
   notes: string;
+  equipmentIds?: string[]; // Equipment IDs assigned to this client
   createdAt: number;
 }
 
@@ -575,5 +576,36 @@ export async function updateEquipment(equipment: Equipment): Promise<void> {
   } catch (error) {
     console.error("Error updating equipment:", error);
     throw error;
+  }
+}
+
+
+// Client Equipment Management
+export async function updateClientEquipment(clientId: string, equipmentIds: string[]): Promise<void> {
+  try {
+    const clients = await getClients();
+    const index = clients.findIndex((c) => c.id === clientId);
+    if (index >= 0) {
+      clients[index].equipmentIds = equipmentIds;
+      await AsyncStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
+    }
+  } catch (error) {
+    console.error("Error updating client equipment:", error);
+    throw error;
+  }
+}
+
+export async function getClientEquipment(clientId: string): Promise<Equipment[]> {
+  try {
+    const clients = await getClients();
+    const client = clients.find((c) => c.id === clientId);
+    if (!client || !client.equipmentIds) {
+      return [];
+    }
+    const allEquipment = await getEquipment();
+    return allEquipment.filter((e) => client.equipmentIds?.includes(e.id));
+  } catch (error) {
+    console.error("Error getting client equipment:", error);
+    return [];
   }
 }

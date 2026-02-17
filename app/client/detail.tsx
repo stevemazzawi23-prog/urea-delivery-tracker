@@ -12,7 +12,7 @@ import { useFocusEffect, useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { getClients, getSitesByClient, deleteSite, type Site } from "@/lib/storage";
+import { getClients, getSitesByClient, deleteSite, type Site, getEquipment, getClientEquipment, updateClientEquipment, type Equipment } from "@/lib/storage";
 
 export default function ClientDetailScreen() {
   const colors = useColors();
@@ -20,6 +20,8 @@ export default function ClientDetailScreen() {
   const { clientId } = useLocalSearchParams<{ clientId: string }>();
   const [client, setClient] = useState<any>(null);
   const [sites, setSites] = useState<Site[]>([]);
+  const [allEquipment, setAllEquipment] = useState<Equipment[]>([]);
+  const [clientEquipment, setClientEquipment] = useState<Equipment[]>([]);
 
   const loadData = async () => {
     const clients = await getClients();
@@ -30,6 +32,12 @@ export default function ClientDetailScreen() {
 
     const clientSites = await getSitesByClient(clientId || "");
     setSites(clientSites.sort((a, b) => b.createdAt - a.createdAt));
+
+    const equipment = await getEquipment();
+    setAllEquipment(equipment);
+
+    const assigned = await getClientEquipment(clientId || "");
+    setClientEquipment(assigned);
   };
 
   useFocusEffect(
@@ -195,6 +203,96 @@ export default function ClientDetailScreen() {
           >
             <Text className="text-white text-base font-bold">Démarrer une livraison</Text>
           </TouchableOpacity>
+
+          {/* Equipment Section */}
+          <View className="mb-6">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-xl font-bold text-foreground">Équipements</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (Platform.OS !== "web") {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                  Alert.alert(
+                    "Ajouter des équipements",
+                    "Sélectionnez les équipements pour ce client",
+                    [
+                      ...allEquipment.map((eq) => ({
+                        text: eq.name,
+                        onPress: async () => {
+                          const newIds = [...(client.equipmentIds || []), eq.id];
+                          const uniqueIds = [...new Set(newIds)];
+                          await updateClientEquipment(clientId || "", uniqueIds);
+                          await loadData();
+                          if (Platform.OS !== "web") {
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          }
+                        },
+                      })),
+                      { text: "Annuler", style: "cancel" },
+                    ]
+                  );
+                }}
+                style={{
+                  backgroundColor: colors.primary,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                }}
+                activeOpacity={0.8}
+              >
+                <Text className="text-white text-sm font-semibold">+ Ajouter</Text>
+              </TouchableOpacity>
+            </View>
+
+            {clientEquipment.length > 0 ? (
+              <FlatList
+                data={clientEquipment}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onLongPress={() => {
+                      Alert.alert(
+                        "Supprimer l'équipement",
+                        `Retirer ${item.name}?`,
+                        [
+                          { text: "Annuler", style: "cancel" },
+                          {
+                            text: "Supprimer",
+                            style: "destructive",
+                            onPress: async () => {
+                              const newIds = (client.equipmentIds || []).filter((id: string) => id !== item.id);
+                              await updateClientEquipment(clientId || "", newIds);
+                              await loadData();
+                              if (Platform.OS !== "web") {
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                              }
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                    style={{ opacity: 1 }}
+                    activeOpacity={0.7}
+                  >
+                    <View className="bg-surface rounded-xl p-4 mb-3 border border-border">
+                      <Text className="text-lg font-semibold text-foreground">{item.name}</Text>
+                      {item.capacity && (
+                        <Text className="text-sm text-muted mt-1">Capacité: {item.capacity}L</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+              />
+            ) : (
+              <View className="bg-surface rounded-xl p-6 items-center border border-border">
+                <Text className="text-muted text-center">
+                  Aucun équipement assigné.{"\n"}Appuyez sur + pour ajouter.
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* Sites Section */}
           <View className="mb-6">
