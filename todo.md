@@ -223,3 +223,7 @@
 
 ## Invoice Template Variations
 - [x] Create simplified invoice template without logo
+
+
+## Bug Fixes - Invoice Display
+- [x] Fix invoice HTML rendering - displaying raw code instead of rendered HTML

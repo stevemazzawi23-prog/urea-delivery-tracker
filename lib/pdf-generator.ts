@@ -45,10 +45,15 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
 export async function openInvoicePDF(filePath: string): Promise<void> {
   try {
     if (Platform.OS === "web") {
-      // For web, open in new tab
-      window.open(filePath, "_blank");
+      // For web, create a blob and open in new tab
+      const response = await fetch(filePath);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      // Clean up the URL after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } else {
-      // For mobile, use WebBrowser
+      // For mobile, use WebBrowser with proper file:// URL
       await WebBrowser.openBrowserAsync(`file://${filePath}`);
     }
   } catch (error) {
