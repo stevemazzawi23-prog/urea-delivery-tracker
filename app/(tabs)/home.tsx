@@ -295,7 +295,7 @@ export default function HomeScreen() {
 
 
         <TouchableOpacity
-          onPress={() => handleNavigation("/delivery/select-site")}
+          onPress={() => handleNavigation("/delivery/select-client")}
           style={{
             backgroundColor: colors.primary,
             borderRadius: 12,
