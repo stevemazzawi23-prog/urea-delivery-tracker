@@ -252,10 +252,10 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
     <div class="header">
       <div class="company-header">
         <div class="company-name">SP LOGISTIX</div>
-        <div class="company-tagline">Livraison d'uree professionnelle</div>
+        <div class="company-tagline">Bureau de MTL</div>
         <div class="company-contact">
           <div>Telephone: (514) 555-0123</div>
-          <div>Email: info@splogistix.com</div>
+          <div>Email: Logistixsp@gmail.com</div>
           <div>Web: www.splogistix.com</div>
         </div>
       </div>
@@ -264,9 +264,7 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
         <div class="invoice-meta">
           <div><strong>No:</strong> ${data.invoiceNumber}</div>
           <div><strong>Date:</strong> ${dateStr}</div>
-          <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
-            <strong>Statut:</strong> <span style="color: #2E7D32;">Payee</span>
-          </div>
+
         </div>
       </div>
     </div>
@@ -302,7 +300,7 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
             <td class="text-right"><strong>$${data.serviceFee.toFixed(2)}</strong></td>
           </tr>
           <tr>
-            <td>Livraison d'uree - Site: ${siteName}</td>
+            <td>Livraison d'uree - ${siteName} - ${dateStr}</td>
             <td class="text-right">${data.litersDelivered} L</td>
             <td class="text-right">$${data.pricePerLiter.toFixed(2)}/L</td>
             <td class="text-right"><strong>$${(data.litersDelivered * data.pricePerLiter).toFixed(2)}</strong></td>
@@ -335,14 +333,14 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
 
     <!-- Payment Terms -->
     <div class="payment-terms">
-      <strong>Conditions de paiement:</strong> Paiement a la livraison ou selon entente. Merci de votre confiance!
+      <strong>Conditions de paiement:</strong> Paiement sous les 15 jours. Merci de votre confiance!
     </div>
 
     <!-- Footer -->
     <div class="footer">
       <div>Merci de votre confiance et de votre affaires!</div>
       <div class="footer-divider">---</div>
-      <div>SP LOGISTIX | Livraison d'uree professionnelle</div>
+      <div>SP LOGISTIX | Bureau de MTL</div>
       <div>© 2026 - Tous droits reserves</div>
     </div>
   </div>

@@ -196,3 +196,12 @@
 
 ## Bug Fixes
 - [x] Fix black screen issue - app not displaying anything
+
+
+## Invoice Customization - SP Logistix
+- [x] Add company information: SP Logistix, bureau de mtl
+- [x] Add email: Logistixsp@gmail.com
+- [x] Update payment terms to "sous les 15 jours"
+- [x] Remove invoice status from invoice
+- [x] Remove word "professionnelle" from description
+- [x] Update description to show "livraison d'urée - site - date de livraison"
