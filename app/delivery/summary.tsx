@@ -5,6 +5,7 @@ import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { saveDelivery, DeliveryUnit } from "@/lib/storage";
+import { removeAccents } from "@/lib/accent-remover";
 
 export default function DeliverySummaryScreen() {
   const colors = useColors();
@@ -98,29 +99,34 @@ export default function DeliverySummaryScreen() {
   };
 
   const generateReport = () => {
+    const cleanClientName = removeAccents(clientName);
+    const cleanClientCompany = removeAccents(clientCompany || "N/A");
+    const cleanSiteName = removeAccents(siteName);
+    const cleanDriverName = removeAccents(driverName || "Non specifie");
+    
     const unitsText = units
-      .map((unit) => `  • ${unit.unitName}: ${unit.liters} L`)
+      .map((unit) => `  • ${removeAccents(unit.unitName)}: ${unit.liters} L`)
       .join("\n");
 
     return `
-RAPPORT DE LIVRAISON D'URÉE
+RAPPORT DE LIVRAISON D'UREE
 ${"=".repeat(50)}
 
-CLIENT: ${clientName}
-ENTREPRISE: ${clientCompany || "N/A"}
-SITE: ${siteName}
-LIVREUR: ${driverName || "Non spécifié"}
+CLIENT: ${cleanClientName}
+ENTREPRISE: ${cleanClientCompany}
+SITE: ${cleanSiteName}
+LIVREUR: ${cleanDriverName}
 
 DATE: ${formatDateTime(startTimestamp)}
-DURÉE: ${formatDuration(durationSeconds)}
+DUREE: ${formatDuration(durationSeconds)}
 
-DÉTAIL DES UNITÉS:
+DETAIL DES UNITES:
 ${unitsText}
 
-TOTAL LIVRÉ: ${liters} litres
+TOTAL LIVRE: ${liters} litres
 
 ${"=".repeat(50)}
-Rapport généré le ${new Date().toLocaleString("fr-CA")}
+Rapport genere le ${new Date().toLocaleString("fr-CA")}
     `.trim();
   };
 

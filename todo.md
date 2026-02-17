@@ -180,3 +180,6 @@
 
 ## Invoice Formatting
 - [x] Remove French accents from invoice PDF text for proper display
+
+## Delivery Ticket Formatting
+- [x] Apply accent removal to delivery ticket PDF text for consistency
