@@ -7,6 +7,8 @@ import {
   Alert,
   FlatList,
   Platform,
+  TextInput,
+  Modal,
 } from "react-native";
 import { useFocusEffect, useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -22,6 +24,9 @@ export default function ClientDetailScreen() {
   const [sites, setSites] = useState<Site[]>([]);
   const [allEquipment, setAllEquipment] = useState<Equipment[]>([]);
   const [clientEquipment, setClientEquipment] = useState<Equipment[]>([]);
+  const [showAddEquipmentModal, setShowAddEquipmentModal] = useState(false);
+  const [newEquipmentName, setNewEquipmentName] = useState("");
+  const [newEquipmentCapacity, setNewEquipmentCapacity] = useState("");
 
   const loadData = async () => {
     const clients = await getClients();
@@ -45,6 +50,37 @@ export default function ClientDetailScreen() {
       loadData();
     }, [clientId])
   );
+
+  const handleAddEquipment = async () => {
+    if (!newEquipmentName.trim()) {
+      Alert.alert("Erreur", "Veuillez entrer le nom de l'equipement");
+      return;
+    }
+
+    try {
+      const newEquipment: Equipment = {
+        id: Date.now().toString(),
+        name: newEquipmentName.trim(),
+        capacity: newEquipmentCapacity ? Number(newEquipmentCapacity) : undefined,
+        createdAt: Date.now(),
+      };
+
+      const newIds = [...(client.equipmentIds || []), newEquipment.id];
+      await updateClientEquipment(clientId || "", newIds);
+      
+      setNewEquipmentName("");
+      setNewEquipmentCapacity("");
+      setShowAddEquipmentModal(false);
+      
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      
+      await loadData();
+    } catch (error) {
+      Alert.alert("Erreur", "Impossible d'ajouter l'equipement");
+    }
+  };
 
   const handleDeleteSite = (site: Site) => {
     Alert.alert(
@@ -210,32 +246,10 @@ export default function ClientDetailScreen() {
               <Text className="text-xl font-bold text-foreground">Équipements</Text>
               <TouchableOpacity
                 onPress={() => {
-                  console.log("Add equipment button pressed");
                   if (Platform.OS !== "web") {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }
-                  const options = allEquipment.map((eq) => ({
-                    text: eq.name,
-                    onPress: async () => {
-                      console.log("Selected equipment:", eq.name);
-                      const newIds = [...(client.equipmentIds || []), eq.id];
-                      const uniqueIds = [...new Set(newIds)];
-                      await updateClientEquipment(clientId || "", uniqueIds);
-                      await loadData();
-                      if (Platform.OS !== "web") {
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                      }
-                    },
-                  }));
-                  
-                  Alert.alert(
-                    "Ajouter des équipements",
-                    "Sélectionnez les équipements pour ce client",
-                    [
-                      ...options,
-                      { text: "Annuler", style: "cancel" },
-                    ]
-                  );
+                  setShowAddEquipmentModal(true);
                 }}
                 style={{
                   backgroundColor: colors.primary,
@@ -341,6 +355,94 @@ export default function ClientDetailScreen() {
           </View>
         </ScrollView>
       </View>
+
+      <Modal
+        visible={showAddEquipmentModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddEquipmentModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: colors.background,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
+              paddingBottom: 40,
+            }}
+          >
+            <Text className="text-2xl font-bold text-foreground mb-6">Ajouter un equipement</Text>
+            
+            <Text className="text-foreground font-semibold mb-2">Nom de l equipement</Text>
+            <TextInput
+              placeholder="Ex: Reservoir 1000L"
+              placeholderTextColor={colors.muted}
+              value={newEquipmentName}
+              onChangeText={setNewEquipmentName}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 16,
+                color: colors.foreground,
+                backgroundColor: colors.surface,
+              }}
+            />
+            
+            <Text className="text-foreground font-semibold mb-2">Capacite L Optionnel</Text>
+            <TextInput
+              placeholder="Ex: 1000"
+              placeholderTextColor={colors.muted}
+              value={newEquipmentCapacity}
+              onChangeText={setNewEquipmentCapacity}
+              keyboardType="numeric"
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 24,
+                color: colors.foreground,
+                backgroundColor: colors.surface,
+              }}
+            />
+            
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => {
+                  setShowAddEquipmentModal(false);
+                  setNewEquipmentName("");
+                  setNewEquipmentCapacity("");
+                }}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: 8,
+                  padding: 12,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Text className="text-foreground text-center font-semibold">Annuler</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={handleAddEquipment}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.primary,
+                  borderRadius: 8,
+                  padding: 12,
+                }}
+              >
+                <Text className="text-white text-center font-semibold">Ajouter</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
