@@ -101,7 +101,12 @@ TVQ (9.975%):               ${invoice.qst.toFixed(2)}$
                             --------
 TOTAL À PAYER:              ${invoice.total.toFixed(2)}$
 
-${"=".repeat(50)}
+${"".repeat(50)}
+CONDITIONS DE PAIEMENT:
+Le paiement doit être effectué dans les 15 jours suivant
+la date de cette facture.
+
+${"".repeat(50)}
 Merci de votre confiance!
 SP Logistix
     `.trim();
