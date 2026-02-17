@@ -513,3 +513,67 @@ export async function markInvoiceAsPaid(invoiceId: string): Promise<void> {
 export async function markInvoiceAsUnpaid(invoiceId: string): Promise<void> {
   await updateInvoiceStatus(invoiceId, 'sent');
 }
+
+
+// Equipment Management
+export interface Equipment {
+  id: string;
+  name: string;
+  capacity?: number; // Optional capacity in liters
+  createdAt: number;
+}
+
+const EQUIPMENT_KEY = "equipment_list";
+
+export async function getEquipment(): Promise<Equipment[]> {
+  try {
+    const data = await AsyncStorage.getItem(EQUIPMENT_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("Error getting equipment:", error);
+    return [];
+  }
+}
+
+export async function addEquipment(name: string, capacity?: number): Promise<Equipment> {
+  try {
+    const equipment: Equipment = {
+      id: Date.now().toString(),
+      name,
+      capacity,
+      createdAt: Date.now(),
+    };
+    const list = await getEquipment();
+    list.push(equipment);
+    await AsyncStorage.setItem(EQUIPMENT_KEY, JSON.stringify(list));
+    return equipment;
+  } catch (error) {
+    console.error("Error adding equipment:", error);
+    throw error;
+  }
+}
+
+export async function deleteEquipment(equipmentId: string): Promise<void> {
+  try {
+    const list = await getEquipment();
+    const filtered = list.filter((e) => e.id !== equipmentId);
+    await AsyncStorage.setItem(EQUIPMENT_KEY, JSON.stringify(filtered));
+  } catch (error) {
+    console.error("Error deleting equipment:", error);
+    throw error;
+  }
+}
+
+export async function updateEquipment(equipment: Equipment): Promise<void> {
+  try {
+    const list = await getEquipment();
+    const index = list.findIndex((e) => e.id === equipment.id);
+    if (index >= 0) {
+      list[index] = equipment;
+      await AsyncStorage.setItem(EQUIPMENT_KEY, JSON.stringify(list));
+    }
+  } catch (error) {
+    console.error("Error updating equipment:", error);
+    throw error;
+  }
+}

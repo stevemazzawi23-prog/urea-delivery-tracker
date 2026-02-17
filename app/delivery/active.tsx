@@ -8,12 +8,13 @@ import {
   Platform,
   ScrollView,
   FlatList,
+  Modal,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { DeliveryUnit } from "@/lib/storage";
+import { DeliveryUnit, Equipment, getEquipment } from "@/lib/storage";
 
 export default function ActiveDeliveryScreen() {
   const colors = useColors();
@@ -32,7 +33,18 @@ export default function ActiveDeliveryScreen() {
   const [unitName, setUnitName] = useState("");
   const [unitLiters, setUnitLiters] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [showEquipmentDropdown, setShowEquipmentDropdown] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Load equipment list on mount
+  useEffect(() => {
+    const loadEquipment = async () => {
+      const equipmentList = await getEquipment();
+      setEquipment(equipmentList);
+    };
+    loadEquipment();
+  }, []);
 
   useEffect(() => {
     // Start timer
@@ -227,8 +239,89 @@ export default function ActiveDeliveryScreen() {
             Ajouter une unité
           </Text>
 
+          {/* Equipment Dropdown Button */}
+          <TouchableOpacity
+            onPress={() => setShowEquipmentDropdown(true)}
+            style={{
+              padding: 12,
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 10,
+              backgroundColor: colors.surface,
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ color: unitName ? colors.foreground : colors.muted }}>
+              {unitName || "Sélectionner un équipement..."}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Equipment Dropdown Modal */}
+          <Modal
+            visible={showEquipmentDropdown}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setShowEquipmentDropdown(false)}
+          >
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+              <View
+                style={{
+                  backgroundColor: colors.background,
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                  paddingTop: 16,
+                  maxHeight: "70%",
+                }}
+              >
+                <View style={{ paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                  <Text style={{ fontSize: 18, fontWeight: "bold", color: colors.foreground }}>Sélectionner un équipement</Text>
+                </View>
+                <FlatList
+                  data={equipment}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setUnitName(item.name);
+                        setShowEquipmentDropdown(false);
+                      }}
+                      style={{
+                        padding: 16,
+                        borderBottomWidth: 1,
+                        borderBottomColor: colors.border,
+                      }}
+                    >
+                      <Text style={{ fontSize: 16, color: colors.foreground }}>{item.name}</Text>
+                      {item.capacity && (
+                        <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>Capacité: {item.capacity}L</Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  ListEmptyComponent={
+                    <View style={{ padding: 16, alignItems: "center" }}>
+                      <Text style={{ color: colors.muted }}>Aucun équipement disponible</Text>
+                    </View>
+                  }
+                />
+                <TouchableOpacity
+                  onPress={() => setShowEquipmentDropdown(false)}
+                  style={{
+                    padding: 16,
+                    backgroundColor: colors.surface,
+                    alignItems: "center",
+                    borderTopWidth: 1,
+                    borderTopColor: colors.border,
+                  }}
+                >
+                  <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>Fermer</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Manual Unit Name Input */}
           <TextInput
-            placeholder="Nom de l'unité (ex: Camion 1, Réservoir A)"
+            placeholder="Ou entrer un nom personnalisé"
             value={unitName}
             onChangeText={setUnitName}
             style={{
@@ -247,6 +340,7 @@ export default function ActiveDeliveryScreen() {
             value={unitLiters}
             onChangeText={setUnitLiters}
             keyboardType="decimal-pad"
+            returnKeyType="done"
             style={{
               padding: 12,
               borderWidth: 1,
