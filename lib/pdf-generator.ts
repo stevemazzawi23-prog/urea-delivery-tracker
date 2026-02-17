@@ -2,7 +2,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { INVOICE_CONFIG } from "./storage";
 import { removeAccents } from "./accent-remover";
 import { generateProfessionalInvoiceHTML, type InvoiceData as ProfessionalInvoiceData } from "./professional-invoice-template";
-import html2pdf from "html2pdf.js";
+import { generatePDFFromHTML } from "./pdf-client-generator";
 
 export interface InvoiceData {
   invoiceNumber: string;
@@ -26,22 +26,14 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
     // Generate professional HTML content
     const htmlContent = generateProfessionalInvoiceHTML(data);
 
-    // Create a temporary HTML file path
+    // Create filename
     const fileName = `facture-${data.invoiceNumber.replace(/\//g, "-")}.pdf`;
-    const filePath = `${FileSystem.cacheDirectory}${fileName}`;
 
-    // For web and native platforms, we need to handle PDF generation differently
-    // For now, save as HTML which can be converted to PDF by the email client
-    // In a real scenario, you'd use a server-side PDF generation service
-    
-    // Save HTML as file
-    const htmlFileName = `facture-${data.invoiceNumber.replace(/\//g, "-")}.html`;
-    const htmlFilePath = `${FileSystem.cacheDirectory}${htmlFileName}`;
-    
-    await FileSystem.writeAsStringAsync(htmlFilePath, htmlContent);
+    // Use client-side PDF generation
+    const pdfPath = await generatePDFFromHTML(htmlContent, fileName);
 
-    console.log("Invoice HTML generated at:", htmlFilePath);
-    return htmlFilePath;
+    console.log("Invoice PDF generated at:", pdfPath);
+    return pdfPath;
   } catch (error) {
     console.error("Error generating invoice:", error);
     throw error;

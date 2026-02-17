@@ -209,3 +209,9 @@
 ## Logo and Branding Updates
 - [x] Replace logo with official SP Logistix logo on invoice
 - [x] Change invoice color scheme to green theme
+
+
+## PDF Generation
+- [x] Integrate HTML to PDF conversion API
+- [x] Create server endpoint for PDF generation
+- [x] Update invoice generation to use PDF API
