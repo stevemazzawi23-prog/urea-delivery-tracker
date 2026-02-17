@@ -256,7 +256,6 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
         <div class="company-contact">
           <div>Telephone: (514) 555-0123</div>
           <div>Email: Logistixsp@gmail.com</div>
-          <div>Web: www.splogistix.com</div>
         </div>
       </div>
       <div class="invoice-header">
