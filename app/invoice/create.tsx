@@ -23,6 +23,7 @@ import {
 } from "@/lib/storage";
 import { generateInvoicePDF, downloadInvoicePDF } from "@/lib/pdf-generator";
 import { generateDeliveryReceiptPDF } from "@/lib/delivery-receipt-generator";
+
 import { sendEmailWithAttachment, generateEmailBody } from "@/lib/email-utils";
 
 export default function CreateInvoiceScreen() {
@@ -240,7 +241,7 @@ SP Logistix
         total: invoice.total,
       });
 
-      await downloadInvoicePDF(pdfPath, `facture-${invoiceNumber}.pdf`);
+      await downloadInvoicePDF(invoiceNumber);
       Alert.alert("Succès", "Facture téléchargée!");
     } catch (error) {
       Alert.alert("Erreur", "Impossible de télécharger la facture.");

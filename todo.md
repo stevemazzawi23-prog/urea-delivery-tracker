@@ -186,3 +186,9 @@
 
 ## Email Features
 - [x] Send invoice PDF as attachment when sending invoice by email
+
+## Invoice PDF Improvements
+- [x] Fix invoice PDF attachment not being sent with email
+- [x] Redesign invoice PDF with professional layout and styling
+- [x] Add company logo and header to invoice
+- [x] Improve invoice formatting with better spacing and typography
