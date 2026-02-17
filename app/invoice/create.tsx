@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -124,6 +124,30 @@ SP Logistix
     }
 
     try {
+      // Generate invoice PDF
+      let pdfPath: string | undefined;
+      try {
+        pdfPath = await generateInvoicePDF({
+          invoiceNumber,
+          invoiceDate: Date.now(),
+          clientName: client.name,
+          clientCompany: client.company,
+          clientAddress: client.address,
+          clientEmail: client.email,
+          siteName: delivery!.siteName,
+          litersDelivered: invoice!.litersDelivered,
+          serviceFee: invoice.serviceFee,
+          pricePerLiter: invoice.pricePerLiter,
+          subtotal: invoice!.subtotal,
+          gst: invoice!.gst,
+          qst: invoice!.qst,
+          total: invoice!.total,
+        });
+        console.log("PDF generated at:", pdfPath);
+      } catch (pdfError) {
+        console.warn("PDF generation failed:", pdfError);
+      }
+
       // Generate email body with invoice details
       const emailBody = await generateEmailBody({
         invoiceNumber,
@@ -133,11 +157,13 @@ SP Logistix
         siteName: delivery!.siteName,
       });
 
-      // Send email without attachments first (simpler approach)
+      // Send email with attachment if PDF was generated
       const emailSent = await sendEmailWithAttachment({
         to: [client.email],
         subject: `Facture ${invoiceNumber} - SP Logistix`,
         body: emailBody,
+        attachmentPath: pdfPath,
+        attachmentMimeType: "application/pdf",
       });
 
       // Save invoice to storage
@@ -214,242 +240,181 @@ SP Logistix
         total: invoice.total,
       });
 
-      await downloadInvoicePDF(pdfPath, `${invoiceNumber}.pdf`);
-
-      if (Platform.OS !== "web") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      Alert.alert("Succès", "Facture téléchargée avec succès!");
+      await downloadInvoicePDF(pdfPath, `facture-${invoiceNumber}.pdf`);
+      Alert.alert("Succès", "Facture téléchargée!");
     } catch (error) {
-      Alert.alert("Erreur", "Impossible de générer la facture PDF.");
+      Alert.alert("Erreur", "Impossible de télécharger la facture.");
     }
   };
 
   if (!delivery || !client || !invoice) {
     return (
       <ScreenContainer>
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <Text style={{ color: colors.muted }}>Chargement...</Text>
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-muted">Chargement...</Text>
         </View>
       </ScreenContainer>
     );
   }
 
   return (
-    <ScreenContainer>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+    <ScreenContainer edges={["top", "left", "right"]}>
+      <View className="flex-1">
         {/* Header */}
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            padding: 16,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
-          }}
-        >
-          <Text style={{ fontSize: 14, color: colors.muted, marginBottom: 4 }}>
-            Facture
-          </Text>
-          <Text style={{ fontSize: 24, fontWeight: "bold", color: colors.foreground }}>
-            {invoiceNumber}
-          </Text>
-        </View>
-
-        {/* Client Info */}
-        <View
-          style={{
-            padding: 16,
-            backgroundColor: colors.surface,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
-            gap: 8,
-          }}
-        >
-          <Text style={{ fontSize: 12, color: colors.muted }}>FACTURATION À:</Text>
-          <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>
-            {client.name}
-          </Text>
-          {client.company && (
-            <Text style={{ fontSize: 14, color: colors.muted }}>{client.company}</Text>
-          )}
-          {client.address && (
-            <Text style={{ fontSize: 14, color: colors.muted }}>{client.address}</Text>
-          )}
-          {client.email && (
-            <Text style={{ fontSize: 14, color: "#1B5E20" }}>{client.email}</Text>
-          )}
-        </View>
-
-        {/* Delivery Info */}
-        <View style={{ padding: 16, gap: 12 }}>
-          <Text style={{ fontSize: 16, fontWeight: "bold", color: colors.foreground }}>
-            Détails de la livraison
-          </Text>
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: 10,
-              padding: 12,
-              gap: 8,
+        <View className="flex-row items-center px-4 py-3 border-b border-border">
+          <TouchableOpacity
+            onPress={() => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.back();
             }}
+            style={{ opacity: 1 }}
+            activeOpacity={0.6}
           >
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: colors.muted }}>Site:</Text>
-              <Text style={{ fontWeight: "600", color: colors.foreground }}>
-                {delivery.siteName}
-              </Text>
+            <Text className="text-primary text-base font-medium">Retour</Text>
+          </TouchableOpacity>
+          <Text className="flex-1 text-lg font-semibold text-foreground text-center">
+            Créer Facture
+          </Text>
+          <View style={{ width: 60 }} />
+        </View>
+
+        {/* Content */}
+        <ScrollView className="flex-1 px-6 pt-6">
+          {/* Invoice Number */}
+          <View className="bg-surface rounded-2xl p-5 mb-4 border border-border">
+            <Text className="text-sm font-medium text-muted mb-2">NUMÉRO DE FACTURE</Text>
+            <Text className="text-2xl font-bold text-foreground">{invoiceNumber}</Text>
+          </View>
+
+          {/* Client Info */}
+          <View className="bg-surface rounded-2xl p-5 mb-4 border border-border">
+            <Text className="text-sm font-medium text-muted mb-2">CLIENT</Text>
+            <Text className="text-xl font-bold text-foreground mb-1">{client.name}</Text>
+            {client.company ? (
+              <Text className="text-base text-muted mb-2">{client.company}</Text>
+            ) : null}
+            {client.address ? (
+              <Text className="text-sm text-muted">{client.address}</Text>
+            ) : null}
+            {client.email ? (
+              <Text className="text-sm text-primary mt-2">{client.email}</Text>
+            ) : null}
+          </View>
+
+          {/* Delivery Details */}
+          <View className="bg-surface rounded-2xl p-5 mb-4 border border-border">
+            <Text className="text-sm font-medium text-muted mb-3">DÉTAILS DE LIVRAISON</Text>
+            <View className="mb-2">
+              <Text className="text-sm text-muted">Site</Text>
+              <Text className="text-base font-semibold text-foreground">{delivery.siteName}</Text>
             </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: colors.muted }}>Quantité livrée:</Text>
-              <Text style={{ fontWeight: "600", color: colors.foreground }}>
-                {invoice.litersDelivered} L
+            <View>
+              <Text className="text-sm text-muted">Quantité livrée</Text>
+              <Text className="text-base font-semibold text-foreground">
+                {invoice.litersDelivered} litres
               </Text>
             </View>
           </View>
-        </View>
 
-        {/* Pricing Details */}
-        <View style={{ padding: 16, gap: 12 }}>
-          <Text style={{ fontSize: 16, fontWeight: "bold", color: colors.foreground }}>
-            Détail de la facturation
-          </Text>
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: 10,
-              padding: 12,
-              gap: 10,
-            }}
-          >
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: colors.muted }}>Frais de service:</Text>
-              <Text style={{ color: colors.foreground }}>
+          {/* Invoice Breakdown */}
+          <View className="bg-surface rounded-2xl p-5 mb-6 border border-border">
+            <Text className="text-sm font-medium text-muted mb-3">DÉTAIL DE FACTURATION</Text>
+            <View className="mb-2 flex-row justify-between">
+              <Text className="text-sm text-muted">Frais de service</Text>
+              <Text className="text-sm font-semibold text-foreground">
                 ${invoice.serviceFee.toFixed(2)}
               </Text>
             </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: colors.muted }}>
-                Livraison ({invoice.litersDelivered}L @ ${invoice.pricePerLiter}/L):
+            <View className="mb-3 flex-row justify-between">
+              <Text className="text-sm text-muted">
+                Livraison ({invoice.litersDelivered}L @ ${invoice.pricePerLiter}/L)
               </Text>
-              <Text style={{ color: colors.foreground }}>
+              <Text className="text-sm font-semibold text-foreground">
                 ${invoice.deliveryCost.toFixed(2)}
               </Text>
             </View>
-            <View
-              style={{
-                borderTopWidth: 1,
-                borderTopColor: colors.border,
-                paddingTop: 8,
-              }}
-            />
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ fontWeight: "600", color: colors.foreground }}>Sous-total:</Text>
-              <Text style={{ fontWeight: "600", color: colors.foreground }}>
+            <View className="border-t border-border pt-2 mb-2 flex-row justify-between">
+              <Text className="text-sm font-medium text-muted">Sous-total</Text>
+              <Text className="text-sm font-semibold text-foreground">
                 ${invoice.subtotal.toFixed(2)}
               </Text>
             </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: colors.muted }}>TPS (5%):</Text>
-              <Text style={{ color: colors.foreground }}>${invoice.gst.toFixed(2)}</Text>
-            </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: colors.muted }}>TVQ (9.975%):</Text>
-              <Text style={{ color: colors.foreground }}>${invoice.qst.toFixed(2)}</Text>
-            </View>
-            <View
-              style={{
-                borderTopWidth: 2,
-                borderTopColor: colors.border,
-                paddingTop: 8,
-                marginTop: 8,
-              }}
-            />
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 16, fontWeight: "bold", color: colors.foreground }}>
-                TOTAL:
+            <View className="mb-2 flex-row justify-between">
+              <Text className="text-sm text-muted">TPS (5%)</Text>
+              <Text className="text-sm font-semibold text-foreground">
+                ${invoice.gst.toFixed(2)}
               </Text>
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "bold",
-                  color: "#1B5E20",
-                }}
-              >
-                ${invoice.total.toFixed(2)}
+            </View>
+            <View className="mb-3 flex-row justify-between">
+              <Text className="text-sm text-muted">TVQ (9.975%)</Text>
+              <Text className="text-sm font-semibold text-foreground">
+                ${invoice.qst.toFixed(2)}
               </Text>
+            </View>
+            <View className="border-t border-border pt-2 flex-row justify-between">
+              <Text className="text-base font-bold text-foreground">TOTAL À PAYER</Text>
+              <Text className="text-lg font-bold text-primary">${invoice.total.toFixed(2)}</Text>
             </View>
           </View>
-        </View>
 
-        {/* Action Buttons */}
-        <View style={{ padding: 16, gap: 10 }}>
+          {/* Payment Terms */}
+          <View className="bg-yellow-50 rounded-2xl p-4 mb-6 border border-yellow-200">
+            <Text className="text-sm font-medium text-yellow-900 mb-1">CONDITIONS DE PAIEMENT</Text>
+            <Text className="text-sm text-yellow-800">
+              Le paiement doit être effectué dans les 15 jours suivant la date de cette facture.
+            </Text>
+          </View>
+
+          {/* Action Buttons */}
           <TouchableOpacity
             onPress={handleSendInvoice}
             style={{
-              backgroundColor: "#1B5E20",
+              backgroundColor: colors.primary,
               paddingVertical: 14,
-              borderRadius: 10,
+              borderRadius: 12,
               alignItems: "center",
+              marginBottom: 12,
             }}
             activeOpacity={0.8}
           >
-            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>
-              📧 Envoyer par email
-            </Text>
+            <Text className="text-white text-base font-semibold">Envoyer par Email</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleDownloadPDF}
             style={{
               backgroundColor: colors.surface,
+              paddingVertical: 14,
+              borderRadius: 12,
+              alignItems: "center",
+              marginBottom: 12,
               borderWidth: 1,
               borderColor: colors.border,
-              paddingVertical: 14,
-              borderRadius: 10,
-              alignItems: "center",
             }}
             activeOpacity={0.8}
           >
-            <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 16 }}>
-              📥 Télécharger PDF
-            </Text>
+            <Text className="text-foreground text-base font-semibold">Télécharger PDF</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleShareInvoice}
             style={{
               backgroundColor: colors.surface,
+              paddingVertical: 14,
+              borderRadius: 12,
+              alignItems: "center",
+              marginBottom: 20,
               borderWidth: 1,
               borderColor: colors.border,
-              paddingVertical: 14,
-              borderRadius: 10,
-              alignItems: "center",
             }}
             activeOpacity={0.8}
           >
-            <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 16 }}>
-              📤 Partager
-            </Text>
+            <Text className="text-foreground text-base font-semibold">Partager / Imprimer</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-              paddingVertical: 14,
-              borderRadius: 10,
-              alignItems: "center",
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={{ color: colors.foreground, fontWeight: "600", fontSize: 16 }}>
-              Fermer
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </ScreenContainer>
   );
 }
