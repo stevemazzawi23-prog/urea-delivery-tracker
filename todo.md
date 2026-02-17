@@ -163,3 +163,11 @@
 - [x] Fix shift end button not stopping the timer correctly
 - [x] Fix shift timer not stopping when shift ends
 - [x] Reset all stats (time, liters, deliveries) to zero when shift ends
+
+## Equipment Management
+- [x] Create equipment data model and storage functions
+- [x] Add equipment management screen
+- [x] Assign equipment to clients
+- [x] Display equipment list in client detail screen
+- [x] Fix equipment saving to AsyncStorage
+- [x] Add capacity validation alert during delivery - warn user if liters exceed equipment capacity

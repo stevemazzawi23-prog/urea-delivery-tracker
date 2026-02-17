@@ -88,6 +88,42 @@ export default function ActiveDeliveryScreen() {
       return;
     }
 
+    // Check if selected equipment has capacity limit
+    const selectedEquipment = equipment.find(e => e.name === unitName.trim());
+    if (selectedEquipment && selectedEquipment.capacity && Number(unitLiters) > selectedEquipment.capacity) {
+      Alert.alert(
+        "Capacité dépassée",
+        `L'équipement "${unitName}" a une capacité de ${selectedEquipment.capacity}L, mais vous avez entré ${unitLiters}L.\n\nVoulez-vous continuer ou vérifier votre entrée?`,
+        [
+          {
+            text: "Vérifier mon entrée",
+            onPress: () => {
+              // Focus on the liters input for correction
+              setUnitLiters("");
+            },
+            style: "default"
+          },
+          {
+            text: "Continuer quand même",
+            onPress: () => {
+              proceedWithAddUnit();
+            },
+            style: "default"
+          },
+          {
+            text: "Annuler",
+            style: "cancel"
+          }
+        ]
+      );
+      return;
+    }
+
+    proceedWithAddUnit();
+  };
+
+  const proceedWithAddUnit = () => {
+
     // Check for duplicate unit name
     const existingUnit = units.find(u => u.unitName.toLowerCase() === unitName.trim().toLowerCase());
     
