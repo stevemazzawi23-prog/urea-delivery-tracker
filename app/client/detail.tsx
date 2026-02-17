@@ -9,6 +9,7 @@ import {
   Platform,
   TextInput,
   Modal,
+  Keyboard,
 } from "react-native";
 import { useFocusEffect, useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -71,6 +72,7 @@ export default function ClientDetailScreen() {
       setNewEquipmentName("");
       setNewEquipmentCapacity("");
       setShowAddEquipmentModal(false);
+      Keyboard.dismiss();
       
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -412,6 +414,7 @@ export default function ClientDetailScreen() {
             <View className="flex-row gap-3">
               <TouchableOpacity
                 onPress={() => {
+                  Keyboard.dismiss();
                   setShowAddEquipmentModal(false);
                   setNewEquipmentName("");
                   setNewEquipmentCapacity("");
