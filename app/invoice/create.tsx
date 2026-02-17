@@ -21,7 +21,7 @@ import {
   type Delivery,
   type Client,
 } from "@/lib/storage";
-import { generateInvoicePDF, downloadInvoicePDF, openInvoicePDF } from "@/lib/pdf-generator";
+import { generateInvoicePDF, downloadInvoicePDF } from "@/lib/pdf-generator";
 import { generateDeliveryReceiptPDF } from "@/lib/delivery-receipt-generator";
 
 import { sendEmailWithAttachment, generateEmailBody } from "@/lib/email-utils";
@@ -241,11 +241,10 @@ SP Logistix
         total: invoice.total,
       });
 
-      // Open the invoice in browser
-      await openInvoicePDF(pdfPath);
-      Alert.alert("Succès", "Facture ouverte!");
+      await downloadInvoicePDF(invoiceNumber);
+      Alert.alert("Succès", "Facture téléchargée!");
     } catch (error) {
-      Alert.alert("Erreur", "Impossible d'ouvrir la facture.");
+      Alert.alert("Erreur", "Impossible de télécharger la facture.");
     }
   };
 
