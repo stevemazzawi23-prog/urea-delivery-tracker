@@ -15,7 +15,7 @@ import { useFocusEffect, useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { getClients, getSitesByClient, deleteSite, type Site, getEquipment, updateClientEquipment, type Equipment } from "@/lib/storage";
+import { getClients, getSitesByClient, deleteSite, type Site, getEquipment, updateClientEquipment, addEquipment, type Equipment } from "@/lib/storage";
 
 export default function ClientDetailScreen() {
   const colors = useColors();
@@ -89,12 +89,10 @@ export default function ClientDetailScreen() {
     try {
       Keyboard.dismiss();
       
-      const newEquipment: Equipment = {
-        id: Date.now().toString(),
-        name: newEquipmentName.trim(),
-        capacity: newEquipmentCapacity ? Number(newEquipmentCapacity) : undefined,
-        createdAt: Date.now(),
-      };
+      const newEquipment = await addEquipment(
+        newEquipmentName.trim(),
+        newEquipmentCapacity ? Number(newEquipmentCapacity) : undefined
+      );
 
       const newIds = [...(client.equipmentIds || []), newEquipment.id];
       await updateClientEquipment(clientId || "", newIds);
