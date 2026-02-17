@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { INVOICE_CONFIG } from "./storage";
+import { removeAccents } from "./accent-remover";
 
 export interface InvoiceData {
   invoiceNumber: string;
@@ -271,6 +272,11 @@ function generateSimplePDF(data: InvoiceData): string {
 
   const date = new Date(data.invoiceDate);
   const dateStr = date.toLocaleDateString("fr-CA");
+  
+  // Remove accents from all text fields for PDF compatibility
+  const clientName = removeAccents(data.clientName);
+  const clientCompany = data.clientCompany ? removeAccents(data.clientCompany) : "";
+  const siteName = removeAccents(data.siteName);
 
   return `
 %PDF-1.4
@@ -292,25 +298,25 @@ BT
 (FACTURE) Tj
 0 -30 Td
 /F1 12 Tf
-(Numéro: ${data.invoiceNumber}) Tj
+(Numero: ${data.invoiceNumber}) Tj
 0 -20 Td
 (Date: ${dateStr}) Tj
 0 -40 Td
 /F1 14 Tf
-(FACTURATION À:) Tj
+(FACTURATION A:) Tj
 0 -20 Td
 /F1 12 Tf
-(${data.clientName}) Tj
+(${clientName}) Tj
 0 -15 Td
-${data.clientCompany ? `(${data.clientCompany}) Tj\n0 -15 Td\n` : ""}
-(Détails de la livraison:) Tj
+${clientCompany ? `(${clientCompany}) Tj\n0 -15 Td\n` : ""}
+(Details de la livraison:) Tj
 0 -20 Td
-(Site: ${data.siteName}) Tj
+(Site: ${siteName}) Tj
 0 -15 Td
-(Quantité livrée: ${data.litersDelivered} litres) Tj
+(Quantite livree: ${data.litersDelivered} litres) Tj
 0 -40 Td
 /F1 14 Tf
-(DÉTAIL DE LA FACTURATION) Tj
+(DETAIL DE LA FACTURATION) Tj
 0 -20 Td
 /F1 12 Tf
 (Frais de service: $${data.serviceFee.toFixed(2)}) Tj
@@ -324,12 +330,12 @@ ${data.clientCompany ? `(${data.clientCompany}) Tj\n0 -15 Td\n` : ""}
 (TVQ (9.975%): $${data.qst.toFixed(2)}) Tj
 0 -20 Td
 /F1 14 Tf
-(TOTAL À PAYER: $${data.total.toFixed(2)}) Tj
+(TOTAL A PAYER: $${data.total.toFixed(2)}) Tj
 0 -40 Td
 /F1 10 Tf
 (Merci de votre confiance!) Tj
 0 -15 Td
-(SP Logistix - Livraison d'urée) Tj
+(SP Logistix - Livraison d'uree) Tj
 ET
 endstream
 endobj

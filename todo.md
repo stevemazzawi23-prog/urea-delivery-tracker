@@ -177,3 +177,6 @@
 - [x] Create shared layout with tab navigation for all detail pages
 - [x] Hide detail pages from tab bar while keeping them accessible
 - [x] Test navigation bar visibility across all pages
+
+## Invoice Formatting
+- [x] Remove French accents from invoice PDF text for proper display
