@@ -22,6 +22,7 @@ import {
   type Client,
 } from "@/lib/storage";
 import { generateInvoicePDF, downloadInvoicePDF } from "@/lib/pdf-generator";
+import { generateDeliveryReceiptPDF } from "@/lib/delivery-receipt-generator";
 import { sendEmailWithAttachment, generateEmailBody } from "@/lib/email-utils";
 
 export default function CreateInvoiceScreen() {
@@ -123,7 +124,7 @@ SP Logistix
     }
 
     try {
-      // Generate PDF first
+      // Generate invoice PDF
       const pdfPath = await generateInvoicePDF({
         invoiceNumber,
         invoiceDate: Date.now(),
@@ -141,6 +142,18 @@ SP Logistix
         total: invoice!.total,
       });
 
+      // Generate delivery receipt PDF
+      const receiptPath = await generateDeliveryReceiptPDF({
+        clientName: client.name,
+        clientCompany: client.company,
+        siteName: delivery!.siteName,
+        driverName: delivery!.driverName,
+        startTime: delivery!.startTime,
+        endTime: delivery!.endTime,
+        litersDelivered: delivery!.litersDelivered,
+        units: delivery!.units || [],
+      });
+
       // Generate email body
       const emailBody = await generateEmailBody({
         invoiceNumber,
@@ -150,13 +163,18 @@ SP Logistix
         siteName: delivery!.siteName,
       });
 
-      // Send email with PDF attachment
+      // Send email with both invoice and receipt attachments
       const emailSent = await sendEmailWithAttachment({
         to: [client.email],
         subject: `Facture ${invoiceNumber} - SP Logistix`,
         body: emailBody,
         attachmentPath: pdfPath,
         attachmentMimeType: "application/pdf",
+        additionalAttachments: [{
+          path: receiptPath,
+          mimeType: "application/pdf",
+          filename: "billet-de-livraison.pdf"
+        }],
       });
 
       // Save invoice to storage

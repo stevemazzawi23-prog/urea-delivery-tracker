@@ -45,6 +45,7 @@ export default function DeliverySummaryScreen() {
         clientCompany,
         siteId,
         siteName,
+        driverName,
         startTime: startTimestamp,
         endTime: endTimestamp,
         units,

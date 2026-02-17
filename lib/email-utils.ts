@@ -8,6 +8,11 @@ export interface EmailOptions {
   body: string;
   attachmentPath?: string;
   attachmentMimeType?: string;
+  additionalAttachments?: Array<{
+    path: string;
+    mimeType?: string;
+    filename?: string;
+  }>;
 }
 
 export async function sendEmailWithAttachment(options: EmailOptions): Promise<boolean> {
@@ -22,7 +27,7 @@ export async function sendEmailWithAttachment(options: EmailOptions): Promise<bo
 
     const attachments: string[] = [];
 
-    // Add attachment if provided
+    // Add main attachment if provided
     if (options.attachmentPath) {
       // For mobile, we need to use the file URI directly
       if (Platform.OS !== "web") {
@@ -30,6 +35,15 @@ export async function sendEmailWithAttachment(options: EmailOptions): Promise<bo
       } else {
         // For web, we would need to handle differently
         console.warn("Email attachment not fully supported on web");
+      }
+    }
+
+    // Add additional attachments
+    if (options.additionalAttachments && options.additionalAttachments.length > 0) {
+      if (Platform.OS !== "web") {
+        options.additionalAttachments.forEach((att) => {
+          attachments.push(att.path);
+        });
       }
     }
 

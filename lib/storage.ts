@@ -48,6 +48,7 @@ export interface Delivery {
   clientCompany: string;
   siteId: string;
   siteName: string;
+  driverName?: string; // Driver name
   startTime: number;
   endTime: number;
   units: DeliveryUnit[]; // Multiple units with liters each
