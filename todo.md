@@ -192,3 +192,7 @@
 - [x] Redesign invoice PDF with professional layout and styling
 - [x] Add company logo and header to invoice
 - [x] Improve invoice formatting with better spacing and typography
+
+
+## Bug Fixes
+- [x] Fix black screen issue - app not displaying anything

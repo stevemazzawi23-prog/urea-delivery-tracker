@@ -24,7 +24,7 @@ const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
 
 export const unstable_settings = {
-  anchor: "(shared)",
+  anchor: "(tabs)",
 };
 
 export default function RootLayout() {
@@ -85,9 +85,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          {/* Use Stack as root navigator with (shared) group that includes tab navigation */}
+          {/* Use Stack as root navigator */}
           <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(shared)" />
+            <Stack.Screen name="(tabs)" />
             <Stack.Screen name="oauth/callback" />
           </Stack>
           <StatusBar style="auto" />

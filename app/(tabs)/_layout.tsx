@@ -28,6 +28,7 @@ export default function TabLayout() {
         },
       }}
     >
+      {/* Main tab screens */}
       <Tabs.Screen
         name="home"
         options={{
@@ -54,6 +55,98 @@ export default function TabLayout() {
         options={{
           title: "À propos",
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="info.circle.fill" color={color} />,
+        }}
+      />
+
+      {/* Detail pages - hidden from tab bar but still part of the navigation */}
+      <Tabs.Screen
+        name="client/detail"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="client/add"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="client/edit"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="client/edit-email"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="delivery/active"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="delivery/select-client"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="delivery/select-site"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="delivery/summary"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="delivery/detail"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="delivery/capture-photo"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="invoice/create"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="site/add"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="site/edit"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="driver/select"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="settings/equipment"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
