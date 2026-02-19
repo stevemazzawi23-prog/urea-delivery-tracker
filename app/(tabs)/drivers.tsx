@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Alert, TextInput, Modal, KeyboardAvoidingView } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -12,6 +12,19 @@ type ModalMode = "create" | "edit" | null;
 export default function DriversScreen() {
   const colors = useColors();
   const { user, users, createUser, updateUser, deleteUser, refreshUsers } = useAuth();
+  const router = useRouter();
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      router.replace('/(tabs)/home');
+    }
+  }, [user, router]);
+
+  if (user?.role !== 'admin') {
+    return null;
+  }
+
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ username: "", password: "", role: "driver" as UserRole });

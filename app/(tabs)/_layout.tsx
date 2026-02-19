@@ -54,25 +54,23 @@ export default function TabLayout() {
         }}
       />
       {/* Admin-only tabs */}
-      {isAdmin && (
-        <>
-          <Tabs.Screen
-            name="audit"
-            options={{
-              title: "Audit",
-              tabBarIcon: ({ color }) => <IconSymbol size={28} name="list.clipboard.fill" color={color} />,
-            }}
-          />
+      <Tabs.Screen
+        name="audit"
+        options={{
+          title: "Audit",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="list.clipboard.fill" color={color} />,
+          href: isAdmin ? undefined : null,
+        }}
+      />
 
-          <Tabs.Screen
-            name="drivers"
-            options={{
-              title: "Chauffeurs",
-              tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.2.fill" color={color} />,
-            }}
-          />
-        </>
-      )}
+      <Tabs.Screen
+        name="drivers"
+        options={{
+          title: "Chauffeurs",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.2.fill" color={color} />,
+          href: isAdmin ? undefined : null,
+        }}
+      />
 
       {/* Detail pages - hidden from tab bar but still part of the navigation */}
       <Tabs.Screen

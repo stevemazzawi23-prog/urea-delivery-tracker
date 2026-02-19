@@ -7,6 +7,7 @@ import {
   FlatList,
   Alert,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/lib/auth-context";
@@ -19,6 +20,18 @@ import {
 export default function AuditScreen() {
   const colors = useColors();
   const { user } = useAuth();
+  const router = useRouter();
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (user && user.role !== 'admin') {
+      router.replace('/(tabs)/home');
+    }
+  }, [user, router]);
+
+  if (user?.role !== 'admin') {
+    return null;
+  }
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "login" | "client" | "delivery">(
