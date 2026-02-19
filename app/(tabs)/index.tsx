@@ -14,11 +14,14 @@ import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
+import { useAuth } from "@/lib/auth-context";
 import { getClients, deleteClient, type Client } from "@/lib/storage";
 
 export default function ClientsScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [clients, setClients] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -81,28 +84,30 @@ export default function ClientsScreen() {
   const renderClient = ({ item }: { item: Client }) => (
     <TouchableOpacity
       onPress={() => handleClientPress(item)}
-      onLongPress={() => handleDeleteClient(item)}
+      onLongPress={() => isAdmin && handleDeleteClient(item)}
       style={{ opacity: 1 }}
       activeOpacity={0.7}
     >
       <View className="bg-surface rounded-xl p-4 mb-3 border border-border">
         <View className="flex-row justify-between items-start mb-1">
           <Text className="text-lg font-semibold text-foreground flex-1">{item.name}</Text>
-          <TouchableOpacity
-            onPress={() => {
-              if (Platform.OS !== "web") {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              router.push({
-                pathname: "/client/edit",
-                params: { clientId: item.id },
-              });
-            }}
-            style={{ opacity: 1 }}
-            activeOpacity={0.6}
-          >
-            <Text className="text-primary text-sm font-medium">Modifier</Text>
-          </TouchableOpacity>
+          {isAdmin && (
+            <TouchableOpacity
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.push({
+                  pathname: "/client/edit",
+                  params: { clientId: item.id },
+                });
+              }}
+              style={{ opacity: 1 }}
+              activeOpacity={0.6}
+            >
+              <Text className="text-primary text-sm font-medium">Modifier</Text>
+            </TouchableOpacity>
+          )}
         </View>
         {item.company ? (
           <Text className="text-sm text-muted mb-1">{item.company}</Text>
@@ -177,34 +182,36 @@ export default function ClientsScreen() {
           }
         />
 
-        {/* Floating Add Button */}
-        <TouchableOpacity
-          onPress={() => {
-            if (Platform.OS !== "web") {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            router.push("/client/add");
-          }}
-          style={{
-            position: "absolute",
-            right: 20,
-            bottom: 20,
-            backgroundColor: colors.primary,
-            width: 60,
-            height: 60,
-            borderRadius: 30,
-            justifyContent: "center",
-            alignItems: "center",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-          }}
-          activeOpacity={0.8}
-        >
-          <IconSymbol name="plus" size={32} color="#ffffff" />
-        </TouchableOpacity>
+        {/* Floating Add Button - Admin Only */}
+        {isAdmin && (
+          <TouchableOpacity
+            onPress={() => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push("/client/add");
+            }}
+            style={{
+              position: "absolute",
+              right: 20,
+              bottom: 20,
+              backgroundColor: colors.primary,
+              width: 60,
+              height: 60,
+              borderRadius: 30,
+              justifyContent: "center",
+              alignItems: "center",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+            }}
+            activeOpacity={0.8}
+          >
+            <IconSymbol name="plus" size={32} color="#ffffff" />
+          </TouchableOpacity>
+        )}
       </View>
     </ScreenContainer>
   );

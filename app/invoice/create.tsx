@@ -12,6 +12,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { useAuth } from "@/lib/auth-context";
 import {
   getDeliveries,
   getClients,
@@ -29,7 +30,15 @@ import { sendEmailWithAttachment, generateEmailBody } from "@/lib/email-utils";
 export default function CreateInvoiceScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { user } = useAuth();
   const { deliveryId } = useLocalSearchParams<{ deliveryId: string }>();
+
+  // Redirect drivers - only admins can create invoices
+  useEffect(() => {
+    if (user?.role !== "admin") {
+      router.replace("/");
+    }
+  }, [user]);
 
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [client, setClient] = useState<Client | null>(null);
@@ -37,11 +46,13 @@ export default function CreateInvoiceScreen() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
 
   useEffect(() => {
-    loadDeliveryAndClient();
-  }, [deliveryId]);
+    if (user?.role === "admin") {
+      loadDeliveryAndClient();
+    }
+  }, [deliveryId, user]);
 
   const loadDeliveryAndClient = async () => {
-    if (!deliveryId) return;
+    if (!deliveryId || user?.role !== "admin") return;
 
     const deliveries = await getDeliveries();
     const foundDelivery = deliveries.find((d) => d.id === deliveryId);
@@ -249,8 +260,28 @@ SP Logistix
   };
 
   if (!delivery || !client || !invoice) {
+  // Show access denied for non-admin users
+  if (user?.role !== "admin") {
     return (
       <ScreenContainer>
+        <View className="flex-1 items-center justify-center px-4">
+          <Text className="text-2xl font-bold text-foreground mb-4">Accès Refusé</Text>
+          <Text className="text-base text-muted text-center mb-8">
+            Vous n'avez pas la permission d'accéder à cette page. Seuls les administrateurs peuvent créer des factures.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.replace("/")}
+            className="bg-primary px-6 py-3 rounded-lg"
+          >
+            <Text className="text-white font-semibold">Retour à l'accueil</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  return (
+    <ScreenContainer>
         <View className="flex-1 items-center justify-center">
           <Text className="text-muted">Chargement...</Text>
         </View>
