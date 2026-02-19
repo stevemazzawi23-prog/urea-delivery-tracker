@@ -205,3 +205,6 @@
 - [x] Remove invoice status from invoice
 - [x] Remove word "professionnelle" from description
 - [x] Update description to show "livraison d'urée - site - date de livraison"
+
+## UI Improvements
+- [x] Remove timer/chrono from homepage

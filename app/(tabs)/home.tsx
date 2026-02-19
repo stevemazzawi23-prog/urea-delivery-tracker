@@ -173,20 +173,7 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Shift Timer */}
-            <View
-              style={{
-                backgroundColor: "rgba(255,255,255,0.1)",
-                borderRadius: 12,
-                padding: 12,
-                marginBottom: 12,
-              }}
-            >
-              <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginBottom: 4 }}>Temps de travail</Text>
-              <Text style={{ fontSize: 32, fontWeight: "700", color: "#fff", fontFamily: "monospace" }}>
-                {formatTime(shiftTime)}
-              </Text>
-            </View>
+
 
             {/* Action Buttons */}
             <View style={{ flexDirection: "row", gap: 8 }}>
