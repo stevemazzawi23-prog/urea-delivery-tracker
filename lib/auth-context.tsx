@@ -15,6 +15,11 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  users: User[];
+  createUser: (username: string, password: string, role: UserRole) => Promise<boolean>;
+  updateUser: (id: string, username: string, password: string, role: UserRole) => Promise<boolean>;
+  deleteUser: (id: string) => Promise<boolean>;
+  refreshUsers: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,14 +38,18 @@ const DEFAULT_USERS = [
   { id: "2", username: "driver1", password: "driver123", role: "driver" as UserRole },
 ];
 
+const ALL_USERS_KEY = "urea_all_users";
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [users, setUsers] = useState<User[]>([]);
 
   // Initialize users and check session on first load
   useEffect(() => {
     const init = async () => {
       await initializeUsers();
+      await loadAllUsers();
       await checkSession();
     };
     init();
@@ -48,14 +57,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const initializeUsers = async () => {
     try {
-      const existingUsers = await AsyncStorage.getItem(USERS_KEY);
+      const existingUsers = await AsyncStorage.getItem(ALL_USERS_KEY);
       if (!existingUsers) {
-        // Store default users without passwords
-        const usersToStore = DEFAULT_USERS.map(({ password, ...user }) => user);
-        await AsyncStorage.setItem(USERS_KEY, JSON.stringify(usersToStore));
+        // Store default users with passwords (for demo purposes)
+        await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(DEFAULT_USERS));
       }
     } catch (error) {
       console.error("Error initializing users:", error);
+    }
+  };
+
+  const loadAllUsers = async () => {
+    try {
+      const allUsersData = await AsyncStorage.getItem(ALL_USERS_KEY);
+      if (allUsersData) {
+        const allUsers = JSON.parse(allUsersData);
+        setUsers(allUsers);
+      }
+    } catch (error) {
+      console.error("Error loading users:", error);
     }
   };
 
@@ -116,6 +136,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const createUser = async (username: string, password: string, role: UserRole): Promise<boolean> => {
+    try {
+      // Check if username already exists
+      if (users.some((u) => u.username === username)) {
+        console.error("Username already exists");
+        return false;
+      }
+
+      const newUser: any = {
+        id: Date.now().toString(),
+        username,
+        password,
+        role,
+      };
+
+      const updatedUsers = [...users, newUser];
+      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(updatedUsers));
+      setUsers(updatedUsers);
+      return true;
+    } catch (error) {
+      console.error("Error creating user:", error);
+      return false;
+    }
+  };
+
+  const updateUser = async (
+    id: string,
+    username: string,
+    password: string,
+    role: UserRole
+  ): Promise<boolean> => {
+    try {
+      // Check if username already exists (excluding current user)
+      if (users.some((u) => u.id !== id && u.username === username)) {
+        console.error("Username already exists");
+        return false;
+      }
+
+      const updatedUsers = users.map((u) =>
+        u.id === id ? { ...u, username, password, role } : u
+      );
+
+      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(updatedUsers));
+      setUsers(updatedUsers);
+      return true;
+    } catch (error) {
+      console.error("Error updating user:", error);
+      return false;
+    }
+  };
+
+  const deleteUser = async (id: string): Promise<boolean> => {
+    try {
+      // Prevent deleting the admin user
+      if (id === "1") {
+        console.error("Cannot delete admin user");
+        return false;
+      }
+
+      const updatedUsers = users.filter((u) => u.id !== id);
+      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(updatedUsers));
+      setUsers(updatedUsers);
+      return true;
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return false;
+    }
+  };
+
+  const refreshUsers = async () => {
+    await loadAllUsers();
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -124,6 +217,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         isAuthenticated: user !== null,
+        users,
+        createUser,
+        updateUser,
+        deleteUser,
+        refreshUsers,
       }}
     >
       {children}
@@ -135,6 +233,14 @@ export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
+}
+
+export function useAuthAdmin() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuthAdmin must be used within AuthProvider");
   }
   return context;
 }

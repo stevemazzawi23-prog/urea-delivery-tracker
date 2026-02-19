@@ -57,6 +57,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="info.circle.fill" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="drivers"
+        options={{
+          title: "Chauffeurs",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.2.fill" color={color} />,
+        }}
+      />
 
       {/* Detail pages - hidden from tab bar but still part of the navigation */}
       <Tabs.Screen
