@@ -239,6 +239,20 @@ export async function deleteDelivery(id: string): Promise<void> {
   }
 }
 
+export async function updateDelivery(id: string, updates: Partial<Delivery>): Promise<void> {
+  try {
+    const deliveries = await getDeliveries();
+    const index = deliveries.findIndex((d) => d.id === id);
+    if (index !== -1) {
+      deliveries[index] = { ...deliveries[index], ...updates };
+      await AsyncStorage.setItem(DELIVERIES_KEY, JSON.stringify(deliveries));
+    }
+  } catch (error) {
+    console.error("Error updating delivery:", error);
+    throw error;
+  }
+}
+
 export async function getDeliveriesByClient(clientId: string): Promise<Delivery[]> {
   try {
     const deliveries = await getDeliveries();

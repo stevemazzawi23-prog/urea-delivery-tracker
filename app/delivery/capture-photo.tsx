@@ -72,26 +72,16 @@ export default function CapturePhotoScreen() {
     }
 
     if (isPostDelivery === "true" && deliveryId) {
-      // Update delivery with new photos
       try {
-        const { getDeliveries, deleteDelivery, saveDelivery } = await import("@/lib/storage");
-        const deliveries = await getDeliveries();
-        const delivery = deliveries.find((d) => d.id === deliveryId);
-        
-        if (delivery) {
-          await deleteDelivery(deliveryId);
-          await saveDelivery({
-            ...delivery,
-            photos,
-          });
-        }
+        const { updateDelivery } = await import("@/lib/storage");
+        await updateDelivery(deliveryId, { photos });
       } catch (error) {
         console.error("Error updating delivery:", error);
+        Alert.alert("Erreur", "Impossible de sauvegarder les photos");
       }
     }
 
     router.back();
-    // Pass photos back through route params
     setTimeout(() => {
       router.setParams({ photosJson: JSON.stringify(photos) });
     }, 100);

@@ -168,18 +168,55 @@ Généré le ${new Date().toLocaleString("fr-CA")}
           </View>
 
           {/* Photos Section */}
-          {delivery.photos && delivery.photos.length > 0 ? (
-            <View className="mb-6">
-              <Text className="text-lg font-bold text-foreground mb-3">Photos de livraison</Text>
-              <View className="flex-row flex-wrap gap-2">
-                {delivery.photos.map((photo, index) => (
-                  <View key={index} className="w-24 h-24 rounded-lg overflow-hidden border border-border">
-                    <Image source={{ uri: photo }} className="w-full h-full" resizeMode="cover" />
-                  </View>
-                ))}
-              </View>
+          <View className="mb-6">
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-lg font-bold text-foreground">Photos de livraison</Text>
+              {delivery.photos && delivery.photos.length > 0 && (
+                <Text className="text-sm text-muted">({delivery.photos.length})</Text>
+              )}
             </View>
-          ) : null}
+            
+            {delivery.photos && delivery.photos.length > 0 ? (
+              <View className="mb-4">
+                <View className="flex-row flex-wrap gap-2">
+                  {delivery.photos.map((photo, index) => (
+                    <View key={index} className="rounded-lg overflow-hidden border border-border bg-surface">
+                      <Image source={{ uri: photo }} className="w-32 h-32" resizeMode="cover" />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <View className="bg-surface rounded-lg p-4 mb-4">
+                <Text className="text-muted text-center">Aucune photo pour cette livraison</Text>
+              </View>
+            )}
+            
+            <TouchableOpacity
+              onPress={() => {
+                if (Platform.OS !== "web") {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.push({
+                  pathname: "/delivery/capture-photo",
+                  params: {
+                    photosJson: JSON.stringify(delivery.photos || []),
+                    isPostDelivery: "true",
+                    deliveryId: delivery.id,
+                  },
+                });
+              }}
+              style={{
+                backgroundColor: colors.primary,
+                paddingVertical: 12,
+                borderRadius: 12,
+                alignItems: "center",
+              }}
+              activeOpacity={0.8}
+            >
+              <Text className="text-white text-base font-semibold">+ Ajouter des photos</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Liters Delivered */}
           <View className="bg-primary rounded-2xl p-6 mb-6 items-center">
