@@ -5,10 +5,12 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { getDeliveries, getInvoices, getCurrentDriver, getActiveShift, endShift, setCurrentDriver } from "@/lib/storage";
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { user, logout } = useAuth();
   const [stats, setStats] = useState({
     deliveriesToday: 0,
     totalLitersToday: 0,
@@ -131,9 +133,51 @@ export default function HomeScreen() {
     router.push(route as any);
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Déconnexion",
+      "Êtes-vous sûr de vouloir vous déconnecter?",
+      [
+        { text: "Annuler", onPress: () => {} },
+        {
+          text: "Déconnecter",
+          onPress: async () => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            await logout();
+            router.replace("/login");
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScreenContainer className="bg-background">
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 }}>
+        {/* User Info and Logout */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <View>
+            <Text style={{ fontSize: 12, color: colors.muted }}>Connecté en tant que</Text>
+            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground, textTransform: "capitalize" }}>
+              {user?.username} ({user?.role})
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleLogout}
+            style={{
+              backgroundColor: colors.error,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 8,
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: "white", fontSize: 12, fontWeight: "600" }}>Déconnecter</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Logo */}
         <View style={{ alignItems: "center", marginBottom: 24 }}>
           <Image
