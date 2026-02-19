@@ -57,6 +57,13 @@ export default function TabLayout() {
       {isAdmin && (
         <>
           <Tabs.Screen
+            name="audit"
+            options={{
+              title: "Audit",
+              tabBarIcon: ({ color }) => <IconSymbol size={28} name="list.clipboard.fill" color={color} />,
+            }}
+          />
+          <Tabs.Screen
             name="website"
             options={{
               title: "À propos",
@@ -152,18 +159,7 @@ export default function TabLayout() {
           href: null,
         }}
       />
-      <Tabs.Screen
-        name="driver/select"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings/equipment"
-        options={{
-          href: null,
-        }}
-      />
+
     </Tabs>
   );
 }

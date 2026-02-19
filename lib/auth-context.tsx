@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { logAuditAction } from "./audit-logger";
 
 export type UserRole = "admin" | "driver";
 
@@ -111,11 +112,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userObj);
         try {
           await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(userObj));
+          await logAuditAction(
+            userObj.id,
+            userObj.username,
+            userObj.role,
+            "LOGIN",
+            undefined,
+            undefined,
+            undefined,
+            {},
+            "success"
+          );
         } catch (storageError) {
           console.error("Error storing session:", storageError);
         }
         return true;
       }
+      await logAuditAction(
+        "unknown",
+        username,
+        "driver",
+        "LOGIN",
+        undefined,
+        undefined,
+        undefined,
+        {},
+        "failure",
+        "Invalid credentials"
+      );
       return false;
     } catch (error) {
       console.error("Error during login:", error);
@@ -125,6 +149,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      if (user) {
+        await logAuditAction(
+          user.id,
+          user.username,
+          user.role,
+          "LOGOUT",
+          undefined,
+          undefined,
+          undefined,
+          {},
+          "success"
+        );
+      }
       setUser(null);
       try {
         await AsyncStorage.removeItem(SESSION_KEY);
