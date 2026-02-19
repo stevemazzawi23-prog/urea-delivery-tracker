@@ -113,6 +113,26 @@ export default function ClientsScreen() {
         {item.email ? (
           <Text className="text-sm text-primary">{item.email}</Text>
         ) : null}
+        
+        {/* View Delivery History Button */}
+        <TouchableOpacity
+          onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            router.push({
+              pathname: "/client/delivery-history",
+              params: { clientId: item.id, clientName: item.name },
+            });
+          }}
+          style={{ opacity: 1 }}
+          activeOpacity={0.6}
+          className="mt-3 bg-primary rounded-lg py-2 px-3"
+        >
+          <Text className="text-white text-sm font-medium text-center">
+            Voir les billets
+          </Text>
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
