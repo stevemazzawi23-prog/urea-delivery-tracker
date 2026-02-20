@@ -363,8 +363,118 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<string> {
 }
 
 export async function downloadInvoicePDF(invoiceNumber: string): Promise<void> {
-  // This function would handle downloading the PDF
-  console.log("Download invoice:", invoiceNumber);
+  try {
+    // On web, create a blob and trigger download
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      // Get the invoice HTML from localStorage or generate it
+      const invoices = JSON.parse(localStorage.getItem('invoices') || '[]');
+      const invoice = invoices.find((inv: any) => inv.invoiceNumber === invoiceNumber);
+      
+      if (!invoice) {
+        throw new Error('Invoice not found');
+      }
+
+      // Create a simple HTML to PDF conversion
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Facture ${invoiceNumber}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .header { border-bottom: 2px solid #2E7D32; padding-bottom: 20px; margin-bottom: 20px; }
+    .company-name { font-size: 24px; font-weight: bold; color: #2E7D32; }
+    .invoice-details { margin: 20px 0; }
+    .section { margin: 20px 0; padding: 10px; border-left: 4px solid #2E7D32; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #2E7D32; color: white; }
+    .total { font-size: 18px; font-weight: bold; color: #2E7D32; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="company-name">SP LOGISTIX</div>
+    <div>Livraison d'uree professionnelle</div>
+  </div>
+  
+  <div class="invoice-details">
+    <h2>FACTURE</h2>
+    <p><strong>Numero:</strong> ${invoice.invoiceNumber}</p>
+    <p><strong>Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('fr-CA')}</p>
+  </div>
+  
+  <div class="section">
+    <h3>Facturation a</h3>
+    <p><strong>${invoice.clientName}</strong></p>
+    <p>${invoice.clientCompany || ''}</p>
+    <p>${invoice.clientAddress || ''}</p>
+    <p>${invoice.clientEmail || ''}</p>
+  </div>
+  
+  <div class="section">
+    <h3>Details de livraison</h3>
+    <table>
+      <tr>
+        <th>Description</th>
+        <th style="text-align: right;">Montant</th>
+      </tr>
+      <tr>
+        <td>Frais de service</td>
+        <td style="text-align: right;">$${invoice.serviceFee.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td>Livraison (${invoice.litersDelivered}L @ $${invoice.pricePerLiter}/L)</td>
+        <td style="text-align: right;">$${(invoice.litersDelivered * invoice.pricePerLiter).toFixed(2)}</td>
+      </tr>
+      <tr style="border-top: 2px solid #2E7D32;">
+        <td><strong>Sous-total</strong></td>
+        <td style="text-align: right;"><strong>$${invoice.subtotal.toFixed(2)}</strong></td>
+      </tr>
+      <tr>
+        <td>TPS (5%)</td>
+        <td style="text-align: right;">$${invoice.gst.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td>TVQ (9.975%)</td>
+        <td style="text-align: right;">$${invoice.qst.toFixed(2)}</td>
+      </tr>
+      <tr style="background-color: #2E7D32; color: white;">
+        <td class="total">TOTAL A PAYER</td>
+        <td class="total" style="text-align: right;">$${invoice.total.toFixed(2)}</td>
+      </tr>
+    </table>
+  </div>
+  
+  <div class="section">
+    <h3>Conditions de paiement</h3>
+    <p>Le paiement doit etre effectue dans les 15 jours suivant la date de cette facture.</p>
+  </div>
+  
+  <div style="margin-top: 40px; text-align: center; color: #999;">
+    <p>Merci de votre confiance!</p>
+    <p>SP Logistix</p>
+  </div>
+</body>
+</html>
+      `;
+
+      // Create blob and download
+      const blob = new Blob([htmlContent], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Facture-${invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    throw error;
+  }
 }
 
 export async function generateDeliveryReceiptPDF(data: any): Promise<string> {
