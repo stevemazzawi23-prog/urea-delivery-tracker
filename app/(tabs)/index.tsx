@@ -8,6 +8,7 @@ import {
   Alert,
   RefreshControl,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -15,35 +16,46 @@ import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/lib/auth-context";
-import { getClients, deleteClient, type Client } from "@/lib/storage";
+import { trpc } from "@/lib/trpc";
 
 export default function ClientsScreen() {
   const colors = useColors();
   const router = useRouter();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const [clients, setClients] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadClients = async () => {
-    const data = await getClients();
-    setClients(data.sort((a, b) => b.createdAt - a.createdAt));
-  };
+  // Use tRPC query to fetch clients
+  const { data: clients = [], refetch, isLoading } = trpc.delivery.listClients.useQuery();
+
+  // Use tRPC mutation to delete client
+  const deleteClientMutation = trpc.delivery.deleteClient.useMutation({
+    onSuccess: () => {
+      refetch();
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    },
+    onError: (error) => {
+      Alert.alert("Erreur", "Impossible de supprimer le client");
+      console.error("Error deleting client:", error);
+    },
+  });
 
   useFocusEffect(
     useCallback(() => {
-      loadClients();
-    }, [])
+      refetch();
+    }, [refetch])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadClients();
+    await refetch();
     setRefreshing(false);
   };
 
-  const handleDeleteClient = (client: Client) => {
+  const handleDeleteClient = (client: any) => {
     Alert.alert(
       "Supprimer le client",
       `Voulez-vous vraiment supprimer ${client.name}?`,
@@ -53,18 +65,14 @@ export default function ClientsScreen() {
           text: "Supprimer",
           style: "destructive",
           onPress: async () => {
-            await deleteClient(client.id);
-            await loadClients();
-            if (Platform.OS !== "web") {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
+            await deleteClientMutation.mutateAsync({ clientId: client.id });
           },
         },
       ]
     );
   };
 
-  const handleClientPress = (client: Client) => {
+  const handleClientPress = (client: any) => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -75,13 +83,13 @@ export default function ClientsScreen() {
   };
 
   const filteredClients = clients.filter(
-    (client) =>
+    (client: any) =>
       client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.phone.includes(searchQuery)
+      (client.company?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+      (client.phone?.includes(searchQuery) || false)
   );
 
-  const renderClient = ({ item }: { item: Client }) => (
+  const renderClient = ({ item }: { item: any }) => (
     <TouchableOpacity
       onPress={() => handleClientPress(item)}
       onLongPress={() => isAdmin && handleDeleteClient(item)}
@@ -142,6 +150,16 @@ export default function ClientsScreen() {
     </TouchableOpacity>
   );
 
+  if (isLoading) {
+    return (
+      <ScreenContainer>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
   return (
     <ScreenContainer>
       <View className="flex-1 px-4 pt-4">
@@ -162,7 +180,7 @@ export default function ClientsScreen() {
         <FlatList
           data={filteredClients}
           renderItem={renderClient}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={{ paddingBottom: 100 }}
           refreshControl={
             <RefreshControl

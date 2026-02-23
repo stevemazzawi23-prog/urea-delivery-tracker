@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,13 +8,14 @@ import {
   RefreshControl,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { getDeliveries, deleteDelivery, getInvoices, deleteInvoice, updateInvoiceStatus, type Delivery, type Invoice } from "@/lib/storage";
-import { useState, useCallback } from "react";
+import { trpc } from "@/lib/trpc";
+
 
 type TabType = "deliveries" | "invoices";
 
@@ -21,31 +23,54 @@ export default function HistoryScreen() {
   const colors = useColors();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("deliveries");
-  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = async () => {
-    const deliveriesData = await getDeliveries();
-    setDeliveries(deliveriesData.sort((a, b) => b.createdAt - a.createdAt));
-    
-    const invoicesData = await getInvoices();
-    setInvoices(invoicesData.sort((a, b) => b.createdAt - a.createdAt));
-  };
+  // Use tRPC queries
+  const { data: deliveries = [], refetch: refetchDeliveries, isLoading: loadingDeliveries } = trpc.delivery.listDeliveries.useQuery();
+  const { data: invoices = [], refetch: refetchInvoices, isLoading: loadingInvoices } = trpc.invoices.listInvoices.useQuery();
+
+  // Use tRPC mutations
+  const deleteDeliveryMutation = trpc.delivery.deleteDelivery.useMutation({
+    onSuccess: () => {
+      refetchDeliveries();
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    },
+  });
+
+  const deleteInvoiceMutation = trpc.invoices.deleteInvoice.useMutation({
+    onSuccess: () => {
+      refetchInvoices();
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    },
+  });
+
+  const updateInvoiceStatusMutation = trpc.invoices.updateStatus.useMutation({
+    onSuccess: () => {
+      refetchInvoices();
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    },
+  });
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [])
+      refetchDeliveries();
+      refetchInvoices();
+    }, [refetchDeliveries, refetchInvoices])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    await Promise.all([refetchDeliveries(), refetchInvoices()]);
     setRefreshing(false);
   };
 
-  const handleDeleteDelivery = (delivery: Delivery) => {
+  const handleDeleteDelivery = (delivery: any) => {
     Alert.alert(
       "Supprimer la livraison",
       "Voulez-vous vraiment supprimer cette livraison?",
@@ -55,18 +80,14 @@ export default function HistoryScreen() {
           text: "Supprimer",
           style: "destructive",
           onPress: async () => {
-            await deleteDelivery(delivery.id);
-            await loadData();
-            if (Platform.OS !== "web") {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
+            await deleteDeliveryMutation.mutateAsync({ deliveryId: delivery.id });
           },
         },
       ]
     );
   };
 
-  const handleDeleteInvoice = (invoice: Invoice) => {
+  const handleDeleteInvoice = (invoice: any) => {
     Alert.alert(
       "Supprimer la facture",
       "Voulez-vous vraiment supprimer cette facture?",
@@ -76,98 +97,43 @@ export default function HistoryScreen() {
           text: "Supprimer",
           style: "destructive",
           onPress: async () => {
-            await deleteInvoice(invoice.id);
-            await loadData();
-            if (Platform.OS !== "web") {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
+            await deleteInvoiceMutation.mutateAsync({ invoiceId: invoice.id });
           },
         },
       ]
     );
   };
 
-  const handleChangeInvoiceStatus = (invoice: Invoice) => {
+  const handleChangeInvoiceStatus = (invoice: any) => {
     const options = [
       { text: "Annuler", style: "cancel" as const },
       {
         text: "Marquer comme Payée",
         onPress: async () => {
-          await updateInvoiceStatus(invoice.id, 'paid');
-          await loadData();
-          if (Platform.OS !== "web") {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          }
+          await updateInvoiceStatusMutation.mutateAsync({ invoiceId: invoice.id, status: 'paid' });
         },
       },
       {
-        text: "Marquer comme Impayée",
+        text: "Marquer comme Envoyée",
         onPress: async () => {
-          await updateInvoiceStatus(invoice.id, 'sent');
-          await loadData();
-          if (Platform.OS !== "web") {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          }
+          await updateInvoiceStatusMutation.mutateAsync({ invoiceId: invoice.id, status: 'sent' });
+        },
+      },
+      {
+        text: "Marquer comme Brouillon",
+        onPress: async () => {
+          await updateInvoiceStatusMutation.mutateAsync({ invoiceId: invoice.id, status: 'draft' });
         },
       },
     ];
+
     Alert.alert("Changer le statut", "Sélectionnez le nouveau statut", options);
   };
 
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString("fr-CA", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  const sortedDeliveries = [...deliveries].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sortedInvoices = [...invoices].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("fr-CA", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatDuration = (startTime: number, endTime: number) => {
-    const seconds = Math.floor((endTime - startTime) / 1000);
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}min`;
-    } else {
-      return `${minutes}min`;
-    }
-  };
-
-  const groupDeliveriesByDate = () => {
-    const groups: { [key: string]: Delivery[] } = {};
-    deliveries.forEach((delivery) => {
-      const dateKey = formatDate(delivery.startTime);
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
-      }
-      groups[dateKey].push(delivery);
-    });
-    return groups;
-  };
-
-  const groupInvoicesByDate = () => {
-    const groups: { [key: string]: Invoice[] } = {};
-    invoices.forEach((invoice) => {
-      const dateKey = formatDate(invoice.createdAt);
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
-      }
-      groups[dateKey].push(invoice);
-    });
-    return groups;
-  };
-
-  const renderDelivery = ({ item }: { item: Delivery }) => (
+  const renderDeliveryItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       onPress={() => {
         if (Platform.OS !== "web") {
@@ -179,166 +145,127 @@ export default function HistoryScreen() {
         });
       }}
       onLongPress={() => handleDeleteDelivery(item)}
-      style={{ opacity: 1 }}
       activeOpacity={0.7}
     >
-      <View style={{
-        backgroundColor: colors.surface,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
-      }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>{item.clientName}</Text>
-            {item.clientCompany && (
-              <Text style={{ fontSize: 12, color: colors.muted }}>{item.clientCompany}</Text>
-            )}
-            {item.siteName && (
-              <Text style={{ fontSize: 11, color: colors.muted, marginTop: 4 }}>{item.siteName}</Text>
-            )}
+      <View className="bg-surface rounded-xl p-4 mb-3 border border-border">
+        <View className="flex-row justify-between items-start mb-2">
+          <View className="flex-1">
+            <Text className="text-lg font-semibold text-foreground">{item.clientName}</Text>
+            <Text className="text-sm text-muted">{item.siteName || "Site non spécifié"}</Text>
           </View>
-          <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ fontSize: 24, fontWeight: "bold", color: colors.primary }}>{item.litersDelivered}</Text>
-            <Text style={{ fontSize: 10, color: colors.muted }}>litres</Text>
-          </View>
+          <Text className="text-sm font-medium text-primary">{item.litersDelivered}L</Text>
         </View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <Text style={{ fontSize: 12, color: colors.muted }}>{formatTime(item.startTime)}</Text>
-          <Text style={{ fontSize: 12, color: colors.muted }}>
-            {formatDuration(item.startTime, item.endTime)}
+        <Text className="text-xs text-muted">
+          {new Date(item.startTime).toLocaleString("fr-FR")}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderInvoiceItem = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      onPress={() => {
+        if (Platform.OS !== "web") {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+        // TODO: Create invoice detail screen
+        Alert.alert("Détail de la facture", `Facture ${item.invoiceNumber}\nTotal: $${(item.total / 100).toFixed(2)}`);
+      }}
+      onLongPress={() => handleDeleteInvoice(item)}
+      activeOpacity={0.7}
+    >
+      <View className="bg-surface rounded-xl p-4 mb-3 border border-border">
+        <View className="flex-row justify-between items-start mb-2">
+          <View className="flex-1">
+            <Text className="text-lg font-semibold text-foreground">{item.invoiceNumber}</Text>
+            <Text className="text-sm text-muted">{item.clientName}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => handleChangeInvoiceStatus(item)}
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 6,
+              backgroundColor:
+                item.status === "paid"
+                  ? colors.success
+                  : item.status === "sent"
+                  ? colors.primary
+                  : colors.warning,
+            }}
+          >
+            <Text className="text-xs font-medium text-white capitalize">
+              {item.status === "paid" ? "Payée" : item.status === "sent" ? "Envoyée" : "Brouillon"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View className="flex-row justify-between">
+          <Text className="text-sm text-muted">${(item.total / 100).toFixed(2)}</Text>
+          <Text className="text-xs text-muted">
+            {new Date(item.invoiceDate).toLocaleDateString("fr-FR")}
           </Text>
         </View>
-        {item.units && item.units.length > 0 && (
-          <View style={{ backgroundColor: colors.background, borderRadius: 8, padding: 8, marginTop: 8 }}>
-            <Text style={{ fontSize: 11, color: colors.muted, marginBottom: 4 }}>Détails:</Text>
-            {item.units.map((unit) => (
-              <Text key={unit.id} style={{ fontSize: 11, color: colors.foreground }}>
-                {unit.unitName}: {unit.liters}L
-              </Text>
-            ))}
-          </View>
-        )}
       </View>
     </TouchableOpacity>
   );
 
-  const renderInvoice = ({ item }: { item: Invoice }) => (
-    <TouchableOpacity
-      onPress={() => handleChangeInvoiceStatus(item)}
-      onLongPress={() => handleDeleteInvoice(item)}
-      style={{ opacity: 1 }}
-      activeOpacity={0.7}
-    >
-      <View style={{
-        backgroundColor: colors.surface,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
-      }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>{item.clientName}</Text>
-            <Text style={{ fontSize: 12, color: colors.muted }}>Facture #{item.invoiceNumber}</Text>
-            {item.clientEmail && (
-              <Text style={{ fontSize: 11, color: colors.muted, marginTop: 4 }}>{item.clientEmail}</Text>
-            )}
-          </View>
-          <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ fontSize: 20, fontWeight: "bold", color: colors.primary }}>${item.total.toFixed(2)}</Text>
-            <Text style={{ 
-              fontSize: 10, 
-              paddingHorizontal: 8, 
-              paddingVertical: 2, 
-              borderRadius: 4,
-              backgroundColor: item.status === 'paid' ? '#22C55E' : item.status === 'sent' ? '#3B82F6' : '#9CA3AF',
-              color: '#fff',
-              marginTop: 4,
-              overflow: 'hidden'
-            }}>
-              {item.status === 'paid' ? 'Payée' : item.status === 'sent' ? 'Envoyée' : 'Brouillon'}
-            </Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={{ fontSize: 12, color: colors.muted }}>{item.litersDelivered}L @ ${item.pricePerLiter.toFixed(2)}/L</Text>
-          <Text style={{ fontSize: 12, color: colors.muted }}>{formatDate(item.createdAt)}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+  const isLoading = activeTab === "deliveries" ? loadingDeliveries : loadingInvoices;
 
-  const groupedDeliveries = groupDeliveriesByDate();
-  const deliveryDateKeys = Object.keys(groupedDeliveries);
-  
-  const groupedInvoices = groupInvoicesByDate();
-  const invoiceDateKeys = Object.keys(groupedInvoices);
+  if (isLoading) {
+    return (
+      <ScreenContainer>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer>
-      <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 16 }}>
+      <View className="flex-1 px-4 pt-4">
         {/* Header */}
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ fontSize: 28, fontWeight: "bold", color: colors.foreground }}>Historique</Text>
-        </View>
+        <Text className="text-3xl font-bold text-foreground mb-4">Historique</Text>
 
         {/* Tab Buttons */}
-        <View style={{ flexDirection: "row", marginBottom: 16, gap: 8 }}>
+        <View className="flex-row gap-2 mb-4">
           <TouchableOpacity
-            onPress={() => {
-              setActiveTab("deliveries");
-              if (Platform.OS !== "web") {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-            }}
+            onPress={() => setActiveTab("deliveries")}
             style={{
               flex: 1,
               paddingVertical: 12,
-              paddingHorizontal: 16,
               borderRadius: 8,
               backgroundColor: activeTab === "deliveries" ? colors.primary : colors.surface,
               borderWidth: 1,
-              borderColor: activeTab === "deliveries" ? colors.primary : colors.border,
+              borderColor: colors.border,
             }}
           >
-            <Text style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: activeTab === "deliveries" ? "#fff" : colors.foreground,
-              textAlign: "center",
-            }}>
-              📦 Billets ({deliveries.length})
+            <Text
+              className={`text-center font-semibold ${
+                activeTab === "deliveries" ? "text-white" : "text-foreground"
+              }`}
+            >
+              Livraisons
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
-            onPress={() => {
-              setActiveTab("invoices");
-              if (Platform.OS !== "web") {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-            }}
+            onPress={() => setActiveTab("invoices")}
             style={{
               flex: 1,
               paddingVertical: 12,
-              paddingHorizontal: 16,
               borderRadius: 8,
               backgroundColor: activeTab === "invoices" ? colors.primary : colors.surface,
               borderWidth: 1,
-              borderColor: activeTab === "invoices" ? colors.primary : colors.border,
+              borderColor: colors.border,
             }}
           >
-            <Text style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: activeTab === "invoices" ? "#fff" : colors.foreground,
-              textAlign: "center",
-            }}>
-              📄 Factures ({invoices.length})
+            <Text
+              className={`text-center font-semibold ${
+                activeTab === "invoices" ? "text-white" : "text-foreground"
+              }`}
+            >
+              Factures
             </Text>
           </TouchableOpacity>
         </View>
@@ -346,9 +273,10 @@ export default function HistoryScreen() {
         {/* Content */}
         {activeTab === "deliveries" ? (
           <FlatList
-            data={deliveryDateKeys}
-            keyExtractor={(item) => item}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            data={sortedDeliveries}
+            renderItem={renderDeliveryItem}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={{ paddingBottom: 100 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -356,29 +284,18 @@ export default function HistoryScreen() {
                 tintColor={colors.primary}
               />
             }
-            renderItem={({ item: dateKey }) => (
-              <View style={{ marginBottom: 24 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 12, textTransform: "uppercase" }}>
-                  {dateKey}
-                </Text>
-                {groupedDeliveries[dateKey].map((delivery) => (
-                  <View key={delivery.id}>{renderDelivery({ item: delivery })}</View>
-                ))}
-              </View>
-            )}
             ListEmptyComponent={
-              <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 48 }}>
-                <Text style={{ color: colors.muted, textAlign: "center", fontSize: 16 }}>
-                  Aucun billet de livraison
-                </Text>
+              <View className="items-center justify-center py-12">
+                <Text className="text-muted text-center">Aucune livraison</Text>
               </View>
             }
           />
         ) : (
           <FlatList
-            data={invoiceDateKeys}
-            keyExtractor={(item) => item}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            data={sortedInvoices}
+            renderItem={renderInvoiceItem}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={{ paddingBottom: 100 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -386,21 +303,9 @@ export default function HistoryScreen() {
                 tintColor={colors.primary}
               />
             }
-            renderItem={({ item: dateKey }) => (
-              <View style={{ marginBottom: 24 }}>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 12, textTransform: "uppercase" }}>
-                  {dateKey}
-                </Text>
-                {groupedInvoices[dateKey].map((invoice) => (
-                  <View key={invoice.id}>{renderInvoice({ item: invoice })}</View>
-                ))}
-              </View>
-            )}
             ListEmptyComponent={
-              <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 48 }}>
-                <Text style={{ color: colors.muted, textAlign: "center", fontSize: 16 }}>
-                  Aucune facture
-                </Text>
+              <View className="items-center justify-center py-12">
+                <Text className="text-muted text-center">Aucune facture</Text>
               </View>
             }
           />
