@@ -18,13 +18,21 @@ export const deliveryRouter = router({
   // Create client
   createClient: protectedProcedure
     .input(z.object({
-      nom: z.string().min(1),
+      name: z.string().min(1),
+      company: z.string().optional(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
       email: z.string().email().optional(),
+      notes: z.string().optional(),
     }))
     .mutation(({ ctx, input }) => {
       return db.createClient(ctx.user.id, {
-        nom: input.nom,
+        name: input.name,
+        company: input.company || null,
+        phone: input.phone || null,
+        address: input.address || null,
         email: input.email || null,
+        notes: input.notes || null,
       });
     }),
 
@@ -32,13 +40,21 @@ export const deliveryRouter = router({
   updateClient: protectedProcedure
     .input(z.object({
       clientId: z.number(),
-      nom: z.string().min(1).optional(),
+      name: z.string().min(1).optional(),
+      company: z.string().optional(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
       email: z.string().email().optional(),
+      notes: z.string().optional(),
     }))
     .mutation(({ input }) => {
       return db.updateClient(input.clientId, {
-        nom: input.nom,
+        name: input.name,
+        company: input.company || null,
+        phone: input.phone || null,
+        address: input.address || null,
         email: input.email || null,
+        notes: input.notes || null,
       });
     }),
 
@@ -60,20 +76,22 @@ export const deliveryRouter = router({
   createSite: protectedProcedure
     .input(z.object({
       clientId: z.number(),
-      nomSite: z.string().min(1),
+      name: z.string().min(1),
+      address: z.string().optional(),
     }))
     .mutation(({ input }) => {
-      return db.createSite(input.clientId, input.nomSite);
+      return db.createSite(input.clientId, input.name, input.address || null);
     }),
 
   // Update site
   updateSite: protectedProcedure
     .input(z.object({
       siteId: z.number(),
-      nomSite: z.string().min(1),
+      name: z.string().min(1).optional(),
+      address: z.string().optional(),
     }))
     .mutation(({ input }) => {
-      return db.updateSite(input.siteId, input.nomSite);
+      return db.updateSite(input.siteId, input.name, input.address || null);
     }),
 
   // Delete site
@@ -99,13 +117,21 @@ export const deliveryRouter = router({
   createDelivery: protectedProcedure
     .input(z.object({
       clientId: z.number(),
+      clientName: z.string(),
+      clientCompany: z.string().optional(),
       siteId: z.number().optional(),
+      siteName: z.string().optional(),
+      driverName: z.string().optional(),
       startTime: z.date(),
     }))
     .mutation(({ ctx, input }) => {
       return db.createDelivery(ctx.user.id, {
         clientId: input.clientId,
+        clientName: input.clientName,
+        clientCompany: input.clientCompany || null,
         siteId: input.siteId || null,
+        siteName: input.siteName || null,
+        driverName: input.driverName || null,
         startTime: input.startTime,
       });
     }),
@@ -115,13 +141,15 @@ export const deliveryRouter = router({
     .input(z.object({
       deliveryId: z.number(),
       endTime: z.date().optional(),
-      liters: z.number().optional(),
-      photos: z.string().optional(), // JSON stringified array
+      litersDelivered: z.number().optional(),
+      driverName: z.string().optional(),
+      photos: z.array(z.string()).optional(), // Array of photo URLs
     }))
     .mutation(({ input }) => {
       return db.updateDelivery(input.deliveryId, {
         endTime: input.endTime,
-        liters: input.liters,
+        litersDelivered: input.litersDelivered,
+        driverName: input.driverName,
         photos: input.photos,
       });
     }),
@@ -158,18 +186,18 @@ export const deliveryRouter = router({
 
       const emailBody = `
         <h2>Preuve de Livraison d'Urée</h2>
-        <p>Bonjour ${info.client.nom},</p>
+        <p>Bonjour ${info.client.name},</p>
         <p>Votre livraison d'urée a été complétée avec succès.</p>
         <hr />
         <h3>Détails de la livraison:</h3>
         <ul>
           <li><strong>Livraison #:</strong> ${info.delivery.id}</li>
-          <li><strong>Client:</strong> ${info.client.nom}</li>
-          <li><strong>Site:</strong> ${info.site?.nomSite || 'N/A'}</li>
+          <li><strong>Client:</strong> ${info.client.name}</li>
+          <li><strong>Site:</strong> ${info.site?.name || 'N/A'}</li>
           <li><strong>Date de début:</strong> ${deliveryDate}</li>
           <li><strong>Date de fin:</strong> ${endDate}</li>
           <li><strong>Durée:</strong> ${duration} minutes</li>
-          <li><strong>Quantité livrée:</strong> ${info.delivery.liters || 0} litres</li>
+          <li><strong>Quantité livrée:</strong> ${info.delivery.litersDelivered || 0} litres</li>
         </ul>
         <hr />
         <p>Merci de votre confiance.</p>

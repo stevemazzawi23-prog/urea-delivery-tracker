@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, clients, sites, deliveries, Client, InsertClient, Site, InsertSite, Delivery, InsertDelivery } from "../drizzle/schema";
+import { InsertUser, users, clients, sites, deliveries, Client, InsertClient, Site, InsertSite, Delivery, InsertDelivery, invoices, auditLogs, driverAccounts, InsertInvoice, InsertAuditLog, InsertDriverAccount } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -148,22 +148,29 @@ export async function getSiteById(siteId: number) {
   return result[0] || null;
 }
 
-export async function createSite(clientId: number, nomSite: string) {
+export async function createSite(clientId: number, name: string, address: string | null = null) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(sites).values({
     clientId,
-    nomSite,
+    name,
+    address,
   });
   return (result as any).insertId;
 }
 
-export async function updateSite(siteId: number, nomSite: string) {
+export async function updateSite(siteId: number, name?: string, address?: string | null) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.update(sites).set({ nomSite }).where(eq(sites.id, siteId));
+  const updates: any = {};
+  if (name !== undefined) updates.name = name;
+  if (address !== undefined) updates.address = address;
+  
+  if (Object.keys(updates).length > 0) {
+    await db.update(sites).set(updates).where(eq(sites.id, siteId));
+  }
 }
 
 export async function deleteSite(siteId: number) {
@@ -229,4 +236,122 @@ export async function getDeliveryWithClientInfo(deliveryId: number) {
     client,
     site,
   };
+}
+
+// ============ INVOICES ============
+
+export async function getInvoicesByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(invoices).where(eq(invoices.userId, userId));
+}
+
+export async function getInvoicesByDelivery(deliveryId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(invoices).where(eq(invoices.deliveryId, deliveryId));
+}
+
+export async function getInvoiceById(invoiceId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
+  return result[0] || null;
+}
+
+export async function createInvoice(userId: number, data: Omit<InsertInvoice, 'userId' | 'id' | 'createdAt' | 'updatedAt'>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(invoices).values({
+    ...data,
+    userId,
+  });
+  return (result as any).insertId;
+}
+
+export async function updateInvoiceStatus(invoiceId: number, status: 'draft' | 'sent' | 'paid') {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(invoices).set({ status }).where(eq(invoices.id, invoiceId));
+}
+
+export async function deleteInvoice(invoiceId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(invoices).where(eq(invoices.id, invoiceId));
+}
+
+// ============ AUDIT LOGS ============
+
+export async function getAuditLogs(userId?: number, limit: number = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  if (userId) {
+    return db.select().from(auditLogs).where(eq(auditLogs.userId, userId)).orderBy(auditLogs.createdAt).limit(limit);
+  }
+  
+  return db.select().from(auditLogs).orderBy(auditLogs.createdAt).limit(limit);
+}
+
+export async function createAuditLog(data: Omit<InsertAuditLog, 'id' | 'createdAt'>) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create audit log: database not available");
+    return;
+  }
+  
+  try {
+    await db.insert(auditLogs).values(data);
+  } catch (error) {
+    console.error("[Database] Failed to create audit log:", error);
+  }
+}
+
+// ============ DRIVER ACCOUNTS ============
+
+export async function getDriverAccountsByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(driverAccounts).where(eq(driverAccounts.userId, userId));
+}
+
+export async function getDriverAccountByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(driverAccounts).where(eq(driverAccounts.username, username));
+  return result[0] || null;
+}
+
+export async function createDriverAccount(userId: number, data: Omit<InsertDriverAccount, 'userId' | 'id' | 'createdAt' | 'updatedAt'>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(driverAccounts).values({
+    ...data,
+    userId,
+  });
+  return (result as any).insertId;
+}
+
+export async function updateDriverAccount(driverAccountId: number, data: Partial<Omit<InsertDriverAccount, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(driverAccounts).set(data).where(eq(driverAccounts.id, driverAccountId));
+}
+
+export async function deleteDriverAccount(driverAccountId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(driverAccounts).where(eq(driverAccounts.id, driverAccountId));
 }
