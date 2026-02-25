@@ -38,7 +38,12 @@ const env = {
   androidPackage: bundleId,
 };
 
-const config: ExpoConfig = {
+const config: ExpoConfig = {extra: {
+  eas: {
+    projectId: "fdf74cfd-9ef3-4672-9314-0e1ae64be053"
+  }
+}, //
+
   name: env.appName,
   slug: env.appSlug,
   version: "1.0.0",
