@@ -13,7 +13,6 @@ import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { getClients, updateClient } from "@/lib/storage";
-import { trpc } from "@/lib/trpc";
 
 export default function EditEmailScreen() {
   const colors = useColors();

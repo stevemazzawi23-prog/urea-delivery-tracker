@@ -16,7 +16,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/lib/auth-context";
-import { trpc } from "@/lib/trpc";
+import { getClients, deleteClient, Client } from "@/lib/storage";
 
 export default function ClientsScreen() {
   const colors = useColors();
@@ -25,37 +25,33 @@ export default function ClientsScreen() {
   const isAdmin = user?.role === "admin";
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Use tRPC query to fetch clients
-  const { data: clients = [], refetch, isLoading } = trpc.delivery.listClients.useQuery();
-
-  // Use tRPC mutation to delete client
-  const deleteClientMutation = trpc.delivery.deleteClient.useMutation({
-    onSuccess: () => {
-      refetch();
-      if (Platform.OS !== "web") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    },
-    onError: (error) => {
-      Alert.alert("Erreur", "Impossible de supprimer le client");
-      console.error("Error deleting client:", error);
-    },
-  });
+  const loadClients = useCallback(async () => {
+    try {
+      const data = await getClients();
+      setClients(data);
+    } catch (error) {
+      console.error("Error loading clients:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      refetch();
-    }, [refetch])
+      loadClients();
+    }, [loadClients])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetch();
+    await loadClients();
     setRefreshing(false);
   };
 
-  const handleDeleteClient = (client: any) => {
+  const handleDeleteClient = (client: Client) => {
     Alert.alert(
       "Supprimer le client",
       `Voulez-vous vraiment supprimer ${client.name}?`,
@@ -65,14 +61,22 @@ export default function ClientsScreen() {
           text: "Supprimer",
           style: "destructive",
           onPress: async () => {
-            await deleteClientMutation.mutateAsync({ clientId: client.id });
+            try {
+              await deleteClient(client.id);
+              await loadClients();
+              if (Platform.OS !== "web") {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
+            } catch (error) {
+              Alert.alert("Erreur", "Impossible de supprimer le client");
+            }
           },
         },
       ]
     );
   };
 
-  const handleClientPress = (client: any) => {
+  const handleClientPress = (client: Client) => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -83,13 +87,13 @@ export default function ClientsScreen() {
   };
 
   const filteredClients = clients.filter(
-    (client: any) =>
+    (client) =>
       client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (client.company?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
       (client.phone?.includes(searchQuery) || false)
   );
 
-  const renderClient = ({ item }: { item: any }) => (
+  const renderClient = ({ item }: { item: Client }) => (
     <TouchableOpacity
       onPress={() => handleClientPress(item)}
       onLongPress={() => isAdmin && handleDeleteClient(item)}
@@ -180,7 +184,7 @@ export default function ClientsScreen() {
         <FlatList
           data={filteredClients}
           renderItem={renderClient}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 100 }}
           refreshControl={
             <RefreshControl

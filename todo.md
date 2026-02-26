@@ -208,3 +208,13 @@
 
 ## UI Improvements
 - [x] Remove timer/chrono from homepage
+
+
+## Fix App for Expo Go (Local Storage Only)
+- [x] Remove tRPC dependency from clients screen (index.tsx) - use AsyncStorage
+- [x] Remove tRPC dependency from history screen (history.tsx) - use AsyncStorage
+- [x] Remove tRPC/QueryClient from root layout (_layout.tsx)
+- [x] Remove unused tRPC import from edit-email.tsx
+- [x] Add missing icon mappings (person.2.fill, list.clipboard.fill)
+- [x] Fix babel.config.js for CommonJS compatibility
+- [x] Fix load-env.js for CommonJS compatibility
