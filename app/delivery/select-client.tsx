@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, Platform, TextInput, FlatList, Alert } from "react-native";
+import { View, Text, TouchableOpacity, Platform, TextInput, FlatList, Alert, StyleSheet } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
@@ -23,13 +23,15 @@ export default function SelectClientScreen() {
 
   const loadClients = async () => {
     try {
+      setLoading(true);
       const clientsList = await getClients();
-      setClients(clientsList.sort((a, b) => b.createdAt - a.createdAt));
-      setFilteredClients(clientsList.sort((a, b) => b.createdAt - a.createdAt));
-      
+      const sorted = [...clientsList].sort((a, b) => b.createdAt - a.createdAt);
+      setClients(sorted);
+      setFilteredClients(sorted);
+
       // Load delivery history for each client
       const history: Record<string, Delivery[]> = {};
-      for (const client of clientsList) {
+      for (const client of sorted) {
         const deliveries = await getDeliveriesByClient(client.id);
         history[client.id] = deliveries.sort((a, b) => b.createdAt - a.createdAt);
       }
@@ -65,7 +67,7 @@ export default function SelectClientScreen() {
       params: {
         clientId: client.id,
         clientName: client.name,
-        clientCompany: client.company,
+        clientCompany: client.company || "",
       },
     });
   };
@@ -73,57 +75,40 @@ export default function SelectClientScreen() {
   const renderClientItem = ({ item }: { item: Client }) => {
     const deliveries = deliveryHistory[item.id] || [];
     const lastDelivery = deliveries.length > 0 ? deliveries[0] : null;
-    const lastDeliveryDate = lastDelivery ? new Date(lastDelivery.createdAt).toLocaleDateString("fr-CA") : null;
-    const totalLiters = deliveries.reduce((sum, d) => sum + d.litersDelivered, 0);
-    
+    const lastDeliveryDate = lastDelivery
+      ? new Date(lastDelivery.createdAt).toLocaleDateString("fr-CA")
+      : null;
+    const totalLiters = deliveries.reduce((sum, d) => sum + (d.litersDelivered || 0), 0);
+
     return (
       <TouchableOpacity
         onPress={() => handleSelectClient(item)}
-        style={{
-          backgroundColor: colors.surface,
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 12,
-          borderWidth: 1,
-          borderColor: colors.border,
-        }}
+        style={[styles.clientCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
         activeOpacity={0.7}
       >
-        <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground, marginBottom: 4 }}>
-          {item.name}
-        </Text>
-        {item.company && (
-          <Text style={{ fontSize: 14, color: colors.muted, marginBottom: 8 }}>
-            {item.company}
-          </Text>
-        )}
-        {item.address && (
-          <Text style={{ fontSize: 12, color: colors.muted, marginBottom: 8 }}>
-            📍 {item.address}
-          </Text>
-        )}
-        
-        {/* Delivery History */}
-        <View style={{ 
-          borderTopWidth: 1, 
-          borderTopColor: colors.border, 
-          paddingTop: 12, 
-          marginTop: 8 
-        }}>
+        <Text style={[styles.clientName, { color: colors.foreground }]}>{item.name}</Text>
+        {item.company ? (
+          <Text style={[styles.clientCompany, { color: colors.muted }]}>{item.company}</Text>
+        ) : null}
+        {item.address ? (
+          <Text style={[styles.clientAddress, { color: colors.muted }]}>📍 {item.address}</Text>
+        ) : null}
+
+        <View style={[styles.historySection, { borderTopColor: colors.border }]}>
           {deliveries.length > 0 ? (
             <>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: colors.foreground, marginBottom: 6 }}>
+              <Text style={[styles.historyTitle, { color: colors.foreground }]}>
                 📦 Historique ({deliveries.length})
               </Text>
-              <Text style={{ fontSize: 11, color: colors.muted, marginBottom: 4 }}>
+              <Text style={[styles.historyText, { color: colors.muted }]}>
                 Dernière livraison: {lastDeliveryDate}
               </Text>
-              <Text style={{ fontSize: 11, color: colors.muted }}>
+              <Text style={[styles.historyText, { color: colors.muted }]}>
                 Total: {totalLiters} L
               </Text>
             </>
           ) : (
-            <Text style={{ fontSize: 11, color: colors.muted, fontStyle: "italic" }}>
+            <Text style={[styles.noHistory, { color: colors.muted }]}>
               Aucune livraison précédente
             </Text>
           )}
@@ -132,78 +117,162 @@ export default function SelectClientScreen() {
     );
   };
 
+  const renderHeader = () => (
+    <View style={styles.listHeader}>
+      <Text style={[styles.title, { color: colors.foreground }]}>Sélectionner un client</Text>
+      <Text style={[styles.subtitle, { color: colors.muted }]}>
+        Choisissez le client pour cette livraison
+      </Text>
+      <TextInput
+        style={[
+          styles.searchInput,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            color: colors.foreground,
+          },
+        ]}
+        placeholder="Rechercher un client..."
+        placeholderTextColor={colors.muted}
+        value={searchQuery}
+        onChangeText={handleSearch}
+        returnKeyType="search"
+      />
+    </View>
+  );
+
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={[styles.emptyText, { color: colors.muted }]}>
+        {loading
+          ? "Chargement des clients..."
+          : searchQuery
+          ? "Aucun client trouvé"
+          : "Aucun client disponible"}
+      </Text>
+      {!loading && !searchQuery && (
+        <Text style={[styles.emptySubtext, { color: colors.muted }]}>
+          Ajoutez un client dans l'onglet Clients
+        </Text>
+      )}
+    </View>
+  );
+
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
-      <View style={{ flex: 1 }}>
-        {/* Header */}
-        <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <TouchableOpacity
-            onPress={() => {
-              if (Platform.OS !== "web") {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              router.back();
-            }}
-            style={{ opacity: 1 }}
-            activeOpacity={0.6}
-          >
-            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: "500" }}>Annuler</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Content */}
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 }}>
-          {/* Title */}
-          <Text style={{ fontSize: 24, fontWeight: "bold", color: colors.foreground, marginBottom: 4 }}>
-            Sélectionner un client
-          </Text>
-          <Text style={{ fontSize: 14, color: colors.muted, marginBottom: 16 }}>
-            Choisissez le client pour cette livraison
-          </Text>
-
-          {/* Search Bar */}
-          <TextInput
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              marginBottom: 16,
-              borderWidth: 1,
-              borderColor: colors.border,
-              color: colors.foreground,
-              fontSize: 14,
-            }}
-            placeholder="Rechercher un client..."
-            placeholderTextColor={colors.muted}
-            value={searchQuery}
-            onChangeText={handleSearch}
-          />
-
-          {/* Clients List */}
-          {loading ? (
-            <Text style={{ textAlign: "center", color: colors.muted, marginTop: 20 }}>
-              Chargement des clients...
-            </Text>
-          ) : filteredClients.length > 0 ? (
-            <FlatList
-              data={filteredClients}
-              renderItem={renderClientItem}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-            />
-          ) : (
-            <View style={{ alignItems: "center", marginTop: 40 }}>
-              <Text style={{ fontSize: 16, color: colors.muted, marginBottom: 8 }}>
-                {searchQuery ? "Aucun client trouvé" : "Aucun client disponible"}
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.muted }}>
-                {searchQuery ? "Essayez une autre recherche" : "Ajoutez un client pour commencer"}
-              </Text>
-            </View>
-          )}
-        </ScrollView>
+      {/* Header */}
+      <View
+        style={[styles.header, { borderBottomColor: colors.border }]}
+      >
+        <TouchableOpacity
+          onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            router.back();
+          }}
+          activeOpacity={0.6}
+        >
+          <Text style={[styles.cancelButton, { color: colors.primary }]}>Annuler</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* FlatList handles all scrolling - no nested ScrollView */}
+      <FlatList
+        data={loading ? [] : filteredClients}
+        renderItem={renderClientItem}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        removeClippedSubviews={false}
+      />
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  cancelButton: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+  listHeader: {
+    paddingTop: 16,
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  searchInput: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    fontSize: 14,
+  },
+  clientCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  clientName: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  clientCompany: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  clientAddress: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  historySection: {
+    borderTopWidth: 1,
+    paddingTop: 12,
+    marginTop: 8,
+  },
+  historyTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  historyText: {
+    fontSize: 11,
+    marginBottom: 4,
+  },
+  noHistory: {
+    fontSize: 11,
+    fontStyle: "italic",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    marginTop: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 12,
+  },
+});
