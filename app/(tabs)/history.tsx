@@ -7,15 +7,13 @@ import {
   Alert,
   RefreshControl,
   Platform,
-  ScrollView,
   ActivityIndicator,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { trpc } from "@/lib/trpc";
-
+import { getDeliveries, getInvoices, deleteDelivery, deleteInvoice, updateInvoiceStatus, Delivery, Invoice } from "@/lib/storage";
 
 type TabType = "deliveries" | "invoices";
 
@@ -24,53 +22,35 @@ export default function HistoryScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("deliveries");
   const [refreshing, setRefreshing] = useState(false);
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Use tRPC queries
-  const { data: deliveries = [], refetch: refetchDeliveries, isLoading: loadingDeliveries } = trpc.delivery.listDeliveries.useQuery();
-  const { data: invoices = [], refetch: refetchInvoices, isLoading: loadingInvoices } = trpc.invoices.listInvoices.useQuery();
-
-  // Use tRPC mutations
-  const deleteDeliveryMutation = trpc.delivery.deleteDelivery.useMutation({
-    onSuccess: () => {
-      refetchDeliveries();
-      if (Platform.OS !== "web") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    },
-  });
-
-  const deleteInvoiceMutation = trpc.invoices.deleteInvoice.useMutation({
-    onSuccess: () => {
-      refetchInvoices();
-      if (Platform.OS !== "web") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    },
-  });
-
-  const updateInvoiceStatusMutation = trpc.invoices.updateStatus.useMutation({
-    onSuccess: () => {
-      refetchInvoices();
-      if (Platform.OS !== "web") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    },
-  });
+  const loadData = useCallback(async () => {
+    try {
+      const [dels, invs] = await Promise.all([getDeliveries(), getInvoices()]);
+      setDeliveries(dels);
+      setInvoices(invs);
+    } catch (error) {
+      console.error("Error loading history:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      refetchDeliveries();
-      refetchInvoices();
-    }, [refetchDeliveries, refetchInvoices])
+      loadData();
+    }, [loadData])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchDeliveries(), refetchInvoices()]);
+    await loadData();
     setRefreshing(false);
   };
 
-  const handleDeleteDelivery = (delivery: any) => {
+  const handleDeleteDelivery = (delivery: Delivery) => {
     Alert.alert(
       "Supprimer la livraison",
       "Voulez-vous vraiment supprimer cette livraison?",
@@ -80,14 +60,22 @@ export default function HistoryScreen() {
           text: "Supprimer",
           style: "destructive",
           onPress: async () => {
-            await deleteDeliveryMutation.mutateAsync({ deliveryId: delivery.id });
+            try {
+              await deleteDelivery(delivery.id);
+              await loadData();
+              if (Platform.OS !== "web") {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
+            } catch (error) {
+              Alert.alert("Erreur", "Impossible de supprimer la livraison");
+            }
           },
         },
       ]
     );
   };
 
-  const handleDeleteInvoice = (invoice: any) => {
+  const handleDeleteInvoice = (invoice: Invoice) => {
     Alert.alert(
       "Supprimer la facture",
       "Voulez-vous vraiment supprimer cette facture?",
@@ -97,43 +85,63 @@ export default function HistoryScreen() {
           text: "Supprimer",
           style: "destructive",
           onPress: async () => {
-            await deleteInvoiceMutation.mutateAsync({ invoiceId: invoice.id });
+            try {
+              await deleteInvoice(invoice.id);
+              await loadData();
+              if (Platform.OS !== "web") {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
+            } catch (error) {
+              Alert.alert("Erreur", "Impossible de supprimer la facture");
+            }
           },
         },
       ]
     );
   };
 
-  const handleChangeInvoiceStatus = (invoice: any) => {
+  const handleChangeInvoiceStatus = (invoice: Invoice) => {
     const options = [
       { text: "Annuler", style: "cancel" as const },
       {
-        text: "Marquer comme Payée",
+        text: "Marquer comme Payee",
         onPress: async () => {
-          await updateInvoiceStatusMutation.mutateAsync({ invoiceId: invoice.id, status: 'paid' });
+          await updateInvoiceStatus(invoice.id, "paid");
+          await loadData();
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
         },
       },
       {
-        text: "Marquer comme Envoyée",
+        text: "Marquer comme Envoyee",
         onPress: async () => {
-          await updateInvoiceStatusMutation.mutateAsync({ invoiceId: invoice.id, status: 'sent' });
+          await updateInvoiceStatus(invoice.id, "sent");
+          await loadData();
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
         },
       },
       {
         text: "Marquer comme Brouillon",
         onPress: async () => {
-          await updateInvoiceStatusMutation.mutateAsync({ invoiceId: invoice.id, status: 'draft' });
+          await updateInvoiceStatus(invoice.id, "draft");
+          await loadData();
+          if (Platform.OS !== "web") {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
         },
       },
     ];
 
-    Alert.alert("Changer le statut", "Sélectionnez le nouveau statut", options);
+    Alert.alert("Changer le statut", "Selectionnez le nouveau statut", options);
   };
 
-  const sortedDeliveries = [...deliveries].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const sortedInvoices = [...invoices].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sortedDeliveries = [...deliveries].sort((a, b) => b.createdAt - a.createdAt);
+  const sortedInvoices = [...invoices].sort((a, b) => b.createdAt - a.createdAt);
 
-  const renderDeliveryItem = ({ item }: { item: any }) => (
+  const renderDeliveryItem = ({ item }: { item: Delivery }) => (
     <TouchableOpacity
       onPress={() => {
         if (Platform.OS !== "web") {
@@ -151,7 +159,7 @@ export default function HistoryScreen() {
         <View className="flex-row justify-between items-start mb-2">
           <View className="flex-1">
             <Text className="text-lg font-semibold text-foreground">{item.clientName}</Text>
-            <Text className="text-sm text-muted">{item.siteName || "Site non spécifié"}</Text>
+            <Text className="text-sm text-muted">{item.siteName || "Site non specifie"}</Text>
           </View>
           <Text className="text-sm font-medium text-primary">{item.litersDelivered}L</Text>
         </View>
@@ -162,14 +170,13 @@ export default function HistoryScreen() {
     </TouchableOpacity>
   );
 
-  const renderInvoiceItem = ({ item }: { item: any }) => (
+  const renderInvoiceItem = ({ item }: { item: Invoice }) => (
     <TouchableOpacity
       onPress={() => {
         if (Platform.OS !== "web") {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
-        // TODO: Create invoice detail screen
-        Alert.alert("Détail de la facture", `Facture ${item.invoiceNumber}\nTotal: $${(item.total / 100).toFixed(2)}`);
+        Alert.alert("Detail de la facture", "Facture " + item.invoiceNumber + "\nTotal: $" + item.total.toFixed(2));
       }}
       onLongPress={() => handleDeleteInvoice(item)}
       activeOpacity={0.7}
@@ -195,12 +202,12 @@ export default function HistoryScreen() {
             }}
           >
             <Text className="text-xs font-medium text-white capitalize">
-              {item.status === "paid" ? "Payée" : item.status === "sent" ? "Envoyée" : "Brouillon"}
+              {item.status === "paid" ? "Payee" : item.status === "sent" ? "Envoyee" : "Brouillon"}
             </Text>
           </TouchableOpacity>
         </View>
         <View className="flex-row justify-between">
-          <Text className="text-sm text-muted">${(item.total / 100).toFixed(2)}</Text>
+          <Text className="text-sm text-muted">${item.total.toFixed(2)}</Text>
           <Text className="text-xs text-muted">
             {new Date(item.invoiceDate).toLocaleDateString("fr-FR")}
           </Text>
@@ -208,8 +215,6 @@ export default function HistoryScreen() {
       </View>
     </TouchableOpacity>
   );
-
-  const isLoading = activeTab === "deliveries" ? loadingDeliveries : loadingInvoices;
 
   if (isLoading) {
     return (
@@ -224,10 +229,7 @@ export default function HistoryScreen() {
   return (
     <ScreenContainer>
       <View className="flex-1 px-4 pt-4">
-        {/* Header */}
         <Text className="text-3xl font-bold text-foreground mb-4">Historique</Text>
-
-        {/* Tab Buttons */}
         <View className="flex-row gap-2 mb-4">
           <TouchableOpacity
             onPress={() => setActiveTab("deliveries")}
@@ -241,14 +243,11 @@ export default function HistoryScreen() {
             }}
           >
             <Text
-              className={`text-center font-semibold ${
-                activeTab === "deliveries" ? "text-white" : "text-foreground"
-              }`}
+              className={"text-center font-semibold " + (activeTab === "deliveries" ? "text-white" : "text-foreground")}
             >
               Livraisons
             </Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             onPress={() => setActiveTab("invoices")}
             style={{
@@ -261,28 +260,20 @@ export default function HistoryScreen() {
             }}
           >
             <Text
-              className={`text-center font-semibold ${
-                activeTab === "invoices" ? "text-white" : "text-foreground"
-              }`}
+              className={"text-center font-semibold " + (activeTab === "invoices" ? "text-white" : "text-foreground")}
             >
               Factures
             </Text>
           </TouchableOpacity>
         </View>
-
-        {/* Content */}
         {activeTab === "deliveries" ? (
           <FlatList
             data={sortedDeliveries}
             renderItem={renderDeliveryItem}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingBottom: 100 }}
             refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
             }
             ListEmptyComponent={
               <View className="items-center justify-center py-12">
@@ -294,14 +285,10 @@ export default function HistoryScreen() {
           <FlatList
             data={sortedInvoices}
             renderItem={renderInvoiceItem}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingBottom: 100 }}
             refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
             }
             ListEmptyComponent={
               <View className="items-center justify-center py-12">
