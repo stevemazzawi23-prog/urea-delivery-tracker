@@ -218,3 +218,9 @@
 - [x] Add missing icon mappings (person.2.fill, list.clipboard.fill)
 - [x] Fix babel.config.js for CommonJS compatibility
 - [x] Fix load-env.js for CommonJS compatibility
+
+
+## Fix Delivery Flow for Android APK
+- [x] Fix select-client.tsx - replace FlatList inside ScrollView with standalone FlatList (fixes Android blank page)
+- [x] Fix select-site.tsx - replace className with StyleSheet.create (fixes Android rendering)
+- [x] Remove nested scroll conflicts in delivery screens
