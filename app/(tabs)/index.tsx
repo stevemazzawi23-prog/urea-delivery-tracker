@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Platform,
   ActivityIndicator,
+  StyleSheet,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -97,67 +98,61 @@ export default function ClientsScreen() {
     <TouchableOpacity
       onPress={() => handleClientPress(item)}
       onLongPress={() => isAdmin && handleDeleteClient(item)}
-      style={{ opacity: 1 }}
       activeOpacity={0.7}
+      style={[styles.clientCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
-      <View className="bg-surface rounded-xl p-4 mb-3 border border-border">
-        <View className="flex-row justify-between items-start mb-1">
-          <Text className="text-lg font-semibold text-foreground flex-1">{item.name}</Text>
-          {isAdmin && (
-            <TouchableOpacity
-              onPress={() => {
-                if (Platform.OS !== "web") {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                router.push({
-                  pathname: "/client/edit",
-                  params: { clientId: item.id },
-                });
-              }}
-              style={{ opacity: 1 }}
-              activeOpacity={0.6}
-            >
-              <Text className="text-primary text-sm font-medium">Modifier</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {item.company ? (
-          <Text className="text-sm text-muted mb-1">{item.company}</Text>
-        ) : null}
-        {item.phone ? (
-          <Text className="text-sm text-muted mb-1">{item.phone}</Text>
-        ) : null}
-        {item.email ? (
-          <Text className="text-sm text-primary">{item.email}</Text>
-        ) : null}
-        
-        {/* View Delivery History Button */}
-        <TouchableOpacity
-          onPress={() => {
-            if (Platform.OS !== "web") {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-            router.push({
-              pathname: "/client/delivery-history",
-              params: { clientId: item.id, clientName: item.name },
-            });
-          }}
-          style={{ opacity: 1 }}
-          activeOpacity={0.6}
-          className="mt-3 bg-primary rounded-lg py-2 px-3"
-        >
-          <Text className="text-white text-sm font-medium text-center">
-            Voir les billets
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.clientHeader}>
+        <Text style={[styles.clientName, { color: colors.foreground }]}>{item.name}</Text>
+        {isAdmin && (
+          <TouchableOpacity
+            onPress={() => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+              router.push({
+                pathname: "/client/edit",
+                params: { clientId: item.id },
+              });
+            }}
+            activeOpacity={0.6}
+          >
+            <Text style={[styles.editButton, { color: colors.primary }]}>Modifier</Text>
+          </TouchableOpacity>
+        )}
       </View>
+      {item.company ? (
+        <Text style={[styles.clientInfo, { color: colors.muted }]}>{item.company}</Text>
+      ) : null}
+      {item.phone ? (
+        <Text style={[styles.clientInfo, { color: colors.muted }]}>{item.phone}</Text>
+      ) : null}
+      {item.email ? (
+        <Text style={[styles.clientEmail, { color: colors.primary }]}>{item.email}</Text>
+      ) : null}
+
+      {/* View Delivery History Button */}
+      <TouchableOpacity
+        onPress={() => {
+          if (Platform.OS !== "web") {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+          router.push({
+            pathname: "/client/delivery-history",
+            params: { clientId: item.id, clientName: item.name },
+          });
+        }}
+        activeOpacity={0.6}
+        style={[styles.historyButton, { backgroundColor: colors.primary }]}
+      >
+        <Text style={styles.historyButtonText}>Voir les billets</Text>
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
   if (isLoading) {
     return (
       <ScreenContainer>
-        <View className="flex-1 items-center justify-center">
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </ScreenContainer>
@@ -166,12 +161,19 @@ export default function ClientsScreen() {
 
   return (
     <ScreenContainer>
-      <View className="flex-1 px-4 pt-4">
+      <View style={styles.container}>
         {/* Header */}
-        <View className="mb-4">
-          <Text className="text-3xl font-bold text-foreground mb-2">Clients</Text>
+        <View style={styles.headerSection}>
+          <Text style={[styles.title, { color: colors.foreground }]}>Clients</Text>
           <TextInput
-            className="bg-surface rounded-xl px-4 py-3 text-foreground border border-border"
+            style={[
+              styles.searchInput,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.foreground,
+              },
+            ]}
             placeholder="Rechercher un client..."
             placeholderTextColor={colors.muted}
             value={searchQuery}
@@ -185,7 +187,7 @@ export default function ClientsScreen() {
           data={filteredClients}
           renderItem={renderClient}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -194,8 +196,8 @@ export default function ClientsScreen() {
             />
           }
           ListEmptyComponent={
-            <View className="items-center justify-center py-12">
-              <Text className="text-muted text-center text-base">
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyText, { color: colors.muted }]}>
                 {searchQuery
                   ? "Aucun client trouvé"
                   : "Aucun client.\nAppuyez sur + pour ajouter un client."}
@@ -213,22 +215,7 @@ export default function ClientsScreen() {
               }
               router.push("/client/add");
             }}
-            style={{
-              position: "absolute",
-              right: 20,
-              bottom: 20,
-              backgroundColor: colors.primary,
-              width: 60,
-              height: 60,
-              borderRadius: 30,
-              justifyContent: "center",
-              alignItems: "center",
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
-            }}
+            style={[styles.fab, { backgroundColor: colors.primary }]}
             activeOpacity={0.8}
           >
             <IconSymbol name="plus" size={32} color="#ffffff" />
@@ -238,3 +225,105 @@ export default function ClientsScreen() {
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerSection: {
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  searchInput: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    borderWidth: 1,
+  },
+  listContent: {
+    paddingBottom: 100,
+  },
+  clientCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  clientHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
+  clientName: {
+    fontSize: 17,
+    fontWeight: "600",
+    flex: 1,
+  },
+  editButton: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  clientInfo: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  clientEmail: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  historyButton: {
+    marginTop: 12,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  historyButtonText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 48,
+  },
+  emptyText: {
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  fab: {
+    position: "absolute",
+    right: 4,
+    bottom: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+});
