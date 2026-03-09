@@ -20,7 +20,8 @@ import { getClients, getSitesByClient, saveSite, deleteSite, type Site, getEquip
 export default function ClientDetailScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { clientId } = useLocalSearchParams<{ clientId: string }>();
+  const params = useLocalSearchParams<{ clientId: string }>();
+  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
   
   const [client, setClient] = useState<any>(null);
   const [sites, setSites] = useState<Site[]>([]);
@@ -40,7 +41,7 @@ export default function ClientDetailScreen() {
     setLoadError(null);
     try {
       if (!clientId) {
-        setLoadError("Client ID not found");
+        setLoadError("Client ID manquant");
         setIsLoading(false);
         return;
       }
@@ -49,7 +50,7 @@ export default function ClientDetailScreen() {
       const foundClient = clients.find((c) => c.id === clientId);
       
       if (!foundClient) {
-        setLoadError("Client not found");
+        setLoadError("Client introuvable");
         setIsLoading(false);
         return;
       }
@@ -145,11 +146,15 @@ export default function ClientDetailScreen() {
     }
 
     try {
-      await saveSite({
+      Keyboard.dismiss();
+      
+      const savedSite = await saveSite({
         clientId: clientId || "",
         name: newSiteName.trim(),
         address: newSiteAddress.trim(),
       });
+      
+      console.log("Site saved:", savedSite);
       
       setNewSiteName("");
       setNewSiteAddress("");
@@ -161,7 +166,8 @@ export default function ClientDetailScreen() {
       
       await loadData();
     } catch (error) {
-      Alert.alert("Erreur", "Impossible d'ajouter le site");
+      console.error("Error saving site:", error);
+      Alert.alert("Erreur", "Impossible d'ajouter le site: " + String(error));
     }
   };
 

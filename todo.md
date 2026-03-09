@@ -224,3 +224,7 @@
 - [x] Fix select-client.tsx - replace FlatList inside ScrollView with standalone FlatList (fixes Android blank page)
 - [x] Fix select-site.tsx - replace className with StyleSheet.create (fixes Android rendering)
 - [x] Remove nested scroll conflicts in delivery screens
+
+
+## Bug Fix - Site Saving in Client Detail
+- [x] Fix site not being saved after adding in client detail screen (modal closes but site not persisted)
