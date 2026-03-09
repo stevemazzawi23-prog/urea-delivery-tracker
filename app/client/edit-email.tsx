@@ -72,14 +72,14 @@ export default function EditEmailScreen() {
 
   if (!client) {
     return (
-      <ScreenContainer className="flex-1 items-center justify-center">
+      <ScreenContainer>
         <ActivityIndicator size="large" color={colors.primary} />
       </ScreenContainer>
     );
   }
 
   return (
-    <ScreenContainer className="flex-1 p-4">
+    <ScreenContainer>
       <View style={{ flex: 1 }}>
         {/* Header */}
         <View style={{ marginBottom: 24 }}>

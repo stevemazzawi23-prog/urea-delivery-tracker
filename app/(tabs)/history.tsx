@@ -8,12 +8,21 @@ import {
   RefreshControl,
   Platform,
   ActivityIndicator,
+  StyleSheet,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { getDeliveries, getInvoices, deleteDelivery, deleteInvoice, updateInvoiceStatus, Delivery, Invoice } from "@/lib/storage";
+import {
+  getDeliveries,
+  getInvoices,
+  deleteDelivery,
+  deleteInvoice,
+  updateInvoiceStatus,
+  Delivery,
+  Invoice,
+} from "@/lib/storage";
 
 type TabType = "deliveries" | "invoices";
 
@@ -101,12 +110,12 @@ export default function HistoryScreen() {
   };
 
   const handleChangeInvoiceStatus = (invoice: Invoice) => {
-    const options = [
+    Alert.alert("Changer le statut", "Selectionnez le nouveau statut", [
       { text: "Annuler", style: "cancel" as const },
       {
-        text: "Marquer comme Payée",
+        text: "Marquer comme Payee",
         onPress: async () => {
-          await updateInvoiceStatus(invoice.id, 'paid');
+          await updateInvoiceStatus(invoice.id, "paid");
           await loadData();
           if (Platform.OS !== "web") {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -114,9 +123,9 @@ export default function HistoryScreen() {
         },
       },
       {
-        text: "Marquer comme Envoyée",
+        text: "Marquer comme Envoyee",
         onPress: async () => {
-          await updateInvoiceStatus(invoice.id, 'sent');
+          await updateInvoiceStatus(invoice.id, "sent");
           await loadData();
           if (Platform.OS !== "web") {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -126,16 +135,14 @@ export default function HistoryScreen() {
       {
         text: "Marquer comme Brouillon",
         onPress: async () => {
-          await updateInvoiceStatus(invoice.id, 'draft');
+          await updateInvoiceStatus(invoice.id, "draft");
           await loadData();
           if (Platform.OS !== "web") {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           }
         },
       },
-    ];
-
-    Alert.alert("Changer le statut", "Sélectionnez le nouveau statut", options);
+    ]);
   };
 
   const sortedDeliveries = [...deliveries].sort((a, b) => b.createdAt - a.createdAt);
@@ -147,23 +154,22 @@ export default function HistoryScreen() {
         if (Platform.OS !== "web") {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
-        router.push({
-          pathname: "/delivery/detail",
-          params: { deliveryId: item.id },
-        });
+        router.push({ pathname: "/delivery/detail", params: { deliveryId: item.id } });
       }}
       onLongPress={() => handleDeleteDelivery(item)}
       activeOpacity={0.7}
     >
-      <View className="bg-surface rounded-xl p-4 mb-3 border border-border">
-        <View className="flex-row justify-between items-start mb-2">
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-foreground">{item.clientName}</Text>
-            <Text className="text-sm text-muted">{item.siteName || "Site non spécifié"}</Text>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={styles.cardRow}>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>{item.clientName}</Text>
+            <Text style={[styles.cardSubtitle, { color: colors.muted }]}>
+              {item.siteName || "Site non specifie"}
+            </Text>
           </View>
-          <Text className="text-sm font-medium text-primary">{item.litersDelivered}L</Text>
+          <Text style={[styles.cardBadge, { color: colors.primary }]}>{item.litersDelivered}L</Text>
         </View>
-        <Text className="text-xs text-muted">
+        <Text style={[styles.cardDate, { color: colors.muted }]}>
           {new Date(item.startTime).toLocaleString("fr-FR")}
         </Text>
       </View>
@@ -176,39 +182,39 @@ export default function HistoryScreen() {
         if (Platform.OS !== "web") {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
-        Alert.alert("Détail de la facture", `Facture ${item.invoiceNumber}\nTotal: $${item.total.toFixed(2)}`);
+        Alert.alert("Detail de la facture", `Facture ${item.invoiceNumber}\nTotal: $${item.total.toFixed(2)}`);
       }}
       onLongPress={() => handleDeleteInvoice(item)}
       activeOpacity={0.7}
     >
-      <View className="bg-surface rounded-xl p-4 mb-3 border border-border">
-        <View className="flex-row justify-between items-start mb-2">
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-foreground">{item.invoiceNumber}</Text>
-            <Text className="text-sm text-muted">{item.clientName}</Text>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={styles.cardRow}>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>{item.invoiceNumber}</Text>
+            <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{item.clientName}</Text>
           </View>
           <TouchableOpacity
             onPress={() => handleChangeInvoiceStatus(item)}
-            style={{
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderRadius: 6,
-              backgroundColor:
-                item.status === "paid"
-                  ? colors.success
-                  : item.status === "sent"
-                  ? colors.primary
-                  : colors.warning,
-            }}
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor:
+                  item.status === "paid"
+                    ? colors.success
+                    : item.status === "sent"
+                    ? colors.primary
+                    : colors.warning,
+              },
+            ]}
           >
-            <Text className="text-xs font-medium text-white capitalize">
-              {item.status === "paid" ? "Payée" : item.status === "sent" ? "Envoyée" : "Brouillon"}
+            <Text style={styles.statusText}>
+              {item.status === "paid" ? "Payee" : item.status === "sent" ? "Envoyee" : "Brouillon"}
             </Text>
           </TouchableOpacity>
         </View>
-        <View className="flex-row justify-between">
-          <Text className="text-sm text-muted">${item.total.toFixed(2)}</Text>
-          <Text className="text-xs text-muted">
+        <View style={styles.cardRow}>
+          <Text style={[styles.cardDate, { color: colors.muted }]}>${item.total.toFixed(2)}</Text>
+          <Text style={[styles.cardDate, { color: colors.muted }]}>
             {new Date(item.invoiceDate).toLocaleDateString("fr-FR")}
           </Text>
         </View>
@@ -219,7 +225,7 @@ export default function HistoryScreen() {
   if (isLoading) {
     return (
       <ScreenContainer>
-        <View className="flex-1 items-center justify-center">
+        <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </ScreenContainer>
@@ -228,27 +234,26 @@ export default function HistoryScreen() {
 
   return (
     <ScreenContainer>
-      <View className="flex-1 px-4 pt-4">
-        {/* Header */}
-        <Text className="text-3xl font-bold text-foreground mb-4">Historique</Text>
+      <View style={styles.container}>
+        <Text style={[styles.title, { color: colors.foreground }]}>Historique</Text>
 
-        {/* Tab Buttons */}
-        <View className="flex-row gap-2 mb-4">
+        {/* Tabs */}
+        <View style={styles.tabRow}>
           <TouchableOpacity
             onPress={() => setActiveTab("deliveries")}
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              borderRadius: 8,
-              backgroundColor: activeTab === "deliveries" ? colors.primary : colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
+            style={[
+              styles.tabButton,
+              {
+                backgroundColor: activeTab === "deliveries" ? colors.primary : colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
           >
             <Text
-              className={`text-center font-semibold ${
-                activeTab === "deliveries" ? "text-white" : "text-foreground"
-              }`}
+              style={[
+                styles.tabText,
+                { color: activeTab === "deliveries" ? "#fff" : colors.foreground },
+              ]}
             >
               Livraisons
             </Text>
@@ -256,42 +261,37 @@ export default function HistoryScreen() {
 
           <TouchableOpacity
             onPress={() => setActiveTab("invoices")}
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              borderRadius: 8,
-              backgroundColor: activeTab === "invoices" ? colors.primary : colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
+            style={[
+              styles.tabButton,
+              {
+                backgroundColor: activeTab === "invoices" ? colors.primary : colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
           >
             <Text
-              className={`text-center font-semibold ${
-                activeTab === "invoices" ? "text-white" : "text-foreground"
-              }`}
+              style={[
+                styles.tabText,
+                { color: activeTab === "invoices" ? "#fff" : colors.foreground },
+              ]}
             >
               Factures
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Content */}
         {activeTab === "deliveries" ? (
           <FlatList
             data={sortedDeliveries}
             renderItem={renderDeliveryItem}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: 100 }}
+            contentContainerStyle={styles.listContent}
             refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
             }
             ListEmptyComponent={
-              <View className="items-center justify-center py-12">
-                <Text className="text-muted text-center">Aucune livraison</Text>
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: colors.muted }]}>Aucune livraison</Text>
               </View>
             }
           />
@@ -300,17 +300,13 @@ export default function HistoryScreen() {
             data={sortedInvoices}
             renderItem={renderInvoiceItem}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: 100 }}
+            contentContainerStyle={styles.listContent}
             refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
             }
             ListEmptyComponent={
-              <View className="items-center justify-center py-12">
-                <Text className="text-muted text-center">Aucune facture</Text>
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: colors.muted }]}>Aucune facture</Text>
               </View>
             }
           />
@@ -319,3 +315,90 @@ export default function HistoryScreen() {
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: "bold",
+    marginBottom: 16,
+  },
+  tabRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  tabText: {
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  listContent: {
+    paddingBottom: 100,
+  },
+  card: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  cardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  cardSubtitle: {
+    fontSize: 13,
+  },
+  cardBadge: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  cardDate: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 48,
+  },
+  emptyText: {
+    fontSize: 15,
+    textAlign: "center",
+  },
+});

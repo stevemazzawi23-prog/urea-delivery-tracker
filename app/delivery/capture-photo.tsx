@@ -90,9 +90,9 @@ export default function CapturePhotoScreen() {
   if (permission === null) {
     return (
       <ScreenContainer>
-        <View className="flex-1 items-center justify-center">
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text className="text-foreground mt-4">Chargement des permissions...</Text>
+          <Text style={{ color: colors.foreground, marginTop: 16 }}>Chargement des permissions...</Text>
         </View>
       </ScreenContainer>
     );
@@ -101,9 +101,9 @@ export default function CapturePhotoScreen() {
   if (!permission?.granted) {
     return (
       <ScreenContainer>
-        <View className="flex-1 items-center justify-center px-4">
-          <Text className="text-lg font-semibold text-foreground mb-4 text-center">
-            Permission d'accès à la caméra requise
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 }}>
+          <Text style={{ fontSize: 17, fontWeight: "600", color: colors.foreground, marginBottom: 16, textAlign: "center" }}>
+            Permission d'acces a la camera requise
           </Text>
           <TouchableOpacity
             onPress={requestPermission}
@@ -115,7 +115,7 @@ export default function CapturePhotoScreen() {
             }}
             activeOpacity={0.8}
           >
-            <Text className="text-white font-semibold">Autoriser l'accès</Text>
+            <Text style={{ color: "#fff", fontWeight: "600" }}>Autoriser l'acces</Text>
           </TouchableOpacity>
         </View>
       </ScreenContainer>

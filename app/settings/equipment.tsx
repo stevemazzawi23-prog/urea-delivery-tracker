@@ -7,6 +7,7 @@ import {
   Alert,
   FlatList,
   Platform,
+  ScrollView,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -76,7 +77,8 @@ export default function EquipmentManagementScreen() {
   };
 
   return (
-    <ScreenContainer className="p-4">
+    <ScreenContainer>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
       {/* Add Equipment Section */}
       <View style={{ marginBottom: 24, gap: 12 }}>
         <Text style={{ fontSize: 18, fontWeight: "bold", color: colors.foreground }}>
@@ -179,6 +181,7 @@ export default function EquipmentManagementScreen() {
           }
         />
       </View>
+      </ScrollView>
     </ScreenContainer>
   );
 }

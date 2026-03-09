@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
@@ -48,15 +48,15 @@ export default function EditSiteScreen() {
 
       router.back();
     } catch (error) {
-      Alert.alert("Erreur", "Impossible de mettre à jour le site.");
+      Alert.alert("Erreur", "Impossible de mettre a jour le site.");
     }
   };
 
   if (!site) {
     return (
       <ScreenContainer>
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-muted">Chargement...</Text>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#0a7ea4" />
         </View>
       </ScreenContainer>
     );
@@ -64,9 +64,9 @@ export default function EditSiteScreen() {
 
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
-      <View className="flex-1">
+      <View style={styles.container}>
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity
             onPress={() => {
               if (Platform.OS !== "web") {
@@ -74,12 +74,11 @@ export default function EditSiteScreen() {
               }
               router.back();
             }}
-            style={{ opacity: 1 }}
             activeOpacity={0.6}
           >
-            <Text className="text-primary text-base font-medium">Annuler</Text>
+            <Text style={[styles.headerButton, { color: colors.primary }]}>Annuler</Text>
           </TouchableOpacity>
-          <Text className="text-lg font-semibold text-foreground">Modifier Site</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Modifier Site</Text>
           <TouchableOpacity
             onPress={() => {
               if (Platform.OS !== "web") {
@@ -87,19 +86,18 @@ export default function EditSiteScreen() {
               }
               handleSave();
             }}
-            style={{ opacity: 1 }}
             activeOpacity={0.6}
           >
-            <Text className="text-primary text-base font-semibold">Sauvegarder</Text>
+            <Text style={[styles.headerButtonBold, { color: colors.primary }]}>Sauvegarder</Text>
           </TouchableOpacity>
         </View>
 
         {/* Form */}
-        <ScrollView className="flex-1 px-4 pt-6">
-          <View className="mb-6">
-            <Text className="text-sm font-medium text-muted mb-2">Nom du site *</Text>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.label, { color: colors.muted }]}>Nom du site *</Text>
             <TextInput
-              className="bg-surface rounded-xl px-4 py-3 text-foreground border border-border text-base"
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
               placeholder="Nom du site de livraison"
               placeholderTextColor={colors.muted}
               value={name}
@@ -108,10 +106,10 @@ export default function EditSiteScreen() {
             />
           </View>
 
-          <View className="mb-6">
-            <Text className="text-sm font-medium text-muted mb-2">Adresse</Text>
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.label, { color: colors.muted }]}>Adresse</Text>
             <TextInput
-              className="bg-surface rounded-xl px-4 py-3 text-foreground border border-border text-base"
+              style={[styles.input, styles.inputMultiline, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
               placeholder="Adresse du site"
               placeholderTextColor={colors.muted}
               value={address}
@@ -126,3 +124,60 @@ export default function EditSiteScreen() {
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  headerButton: {
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  headerButtonBold: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+  },
+  fieldGroup: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "500",
+    marginBottom: 8,
+  },
+  input: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    fontSize: 15,
+  },
+  inputMultiline: {
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+});

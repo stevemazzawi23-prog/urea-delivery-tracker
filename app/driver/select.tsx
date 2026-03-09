@@ -72,7 +72,7 @@ export default function SelectDriverScreen() {
   };
 
   return (
-    <ScreenContainer className="bg-background">
+    <ScreenContainer>
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16 }}>
         <Text
           style={{

@@ -228,3 +228,8 @@
 
 ## Bug Fix - Site Saving in Client Detail
 - [x] Fix site not being saved after adding in client detail screen (modal closes but site not persisted)
+
+## Bug Fixes - Android v2
+- [x] Fix: impossible de sauvegarder plusieurs sites de livraison dans la carte client sur Android APK
+- [x] Fix: page blanche quand on démarre une livraison sans site sélectionné
+- [x] Fix: interface Android ne ressemble pas au simulateur (NativeWind className non rendu)

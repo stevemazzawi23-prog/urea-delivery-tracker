@@ -264,7 +264,7 @@ export default function ActiveDeliveryScreen() {
           <View>
             <Text style={{ fontSize: 12, color: colors.muted }}>Site</Text>
             <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>
-              {siteName}
+              {siteName && siteName.trim() !== "" ? siteName : "Sans site"}
             </Text>
           </View>
         </View>

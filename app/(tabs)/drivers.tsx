@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Alert, TextInput, Modal, KeyboardAvoidingView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Alert, TextInput, Modal, KeyboardAvoidingView, StyleSheet } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
@@ -24,6 +24,7 @@ export default function DriversScreen() {
   if (user?.role !== 'admin') {
     return null;
   }
+
 
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -143,26 +144,16 @@ export default function DriversScreen() {
     );
   };
 
-  // Only admins can access this screen
-  if (user?.role !== "admin") {
-    return (
-      <ScreenContainer className="p-6">
-        <View className="flex-1 justify-center items-center">
-          <Text className="text-lg font-semibold text-error">Accès refusé</Text>
-          <Text className="text-sm text-muted mt-2">Seuls les administrateurs peuvent gérer les chauffeurs</Text>
-        </View>
-      </ScreenContainer>
-    );
-  }
+
 
   return (
-    <ScreenContainer className="bg-background">
+    <ScreenContainer>
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 }}>
         {/* Header */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <View>
-            <Text className="text-2xl font-bold text-foreground">Gestion des chauffeurs</Text>
-            <Text className="text-sm text-muted mt-1">{drivers.length} chauffeur(s)</Text>
+            <Text style={{ fontSize: 22, fontWeight: "bold", color: colors.foreground }}>Gestion des chauffeurs</Text>
+            <Text style={{ fontSize: 13, color: colors.muted, marginTop: 4 }}>{drivers.length} chauffeur(s)</Text>
           </View>
           <TouchableOpacity
             onPress={handleOpenCreateModal}
@@ -181,11 +172,11 @@ export default function DriversScreen() {
         {/* Drivers List */}
         {drivers.length === 0 ? (
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <Text className="text-lg text-muted">Aucun chauffeur</Text>
-            <Text className="text-sm text-muted mt-2">Appuyez sur "+ Ajouter" pour créer un nouveau chauffeur</Text>
+            <Text style={{ fontSize: 17, color: colors.muted }}>Aucun chauffeur</Text>
+            <Text style={{ fontSize: 13, color: colors.muted, marginTop: 8 }}>Appuyez sur "+ Ajouter" pour creer un nouveau chauffeur</Text>
           </View>
         ) : (
-          <View className="gap-3">
+          <View style={{ gap: 12 }}>
             {drivers.map((driver) => (
               <View
                 key={driver.id}
@@ -263,7 +254,7 @@ export default function DriversScreen() {
             </View>
 
             {/* Form Fields */}
-            <View className="gap-4 mb-6">
+            <View style={{ gap: 16, marginBottom: 24 }}>
               {/* Username */}
               <View>
                 <Text style={{ fontSize: 12, fontWeight: "600", color: colors.muted, marginBottom: 8 }}>

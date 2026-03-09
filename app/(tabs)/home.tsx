@@ -154,7 +154,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScreenContainer className="bg-background">
+    <ScreenContainer>
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20 }}>
         {/* User Info and Logout */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>

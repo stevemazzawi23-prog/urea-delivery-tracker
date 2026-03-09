@@ -1,6 +1,16 @@
 import { useState } from "react";
-import { Platform } from "react-native";
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, ScrollView } from "react-native";
+import {
+  Platform,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
@@ -50,62 +60,52 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"} 
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1 }}
     >
       <ScreenContainer edges={["top", "left", "right", "bottom"]}>
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="px-6 py-8">
+          <View style={styles.content}>
             {/* Logo/Title */}
-            <View className="mb-12 items-center">
-              <Text className="text-5xl font-bold text-primary mb-2">🚛</Text>
-              <Text className="text-3xl font-bold text-foreground mb-2">SP Logistix</Text>
-              <Text className="text-base text-muted text-center">
-                Système de livraison d'urée
+            <View style={styles.logoSection}>
+              <Text style={styles.logoEmoji}>🚛</Text>
+              <Text style={[styles.appName, { color: colors.foreground }]}>SP Logistix</Text>
+              <Text style={[styles.appSubtitle, { color: colors.muted }]}>
+                Systeme de livraison d'uree
               </Text>
             </View>
 
             {/* Login Form */}
-            <View className="gap-4 mb-6">
-              {/* Username Input */}
-              <View>
-                <Text className="text-sm font-medium text-muted mb-2">Nom d'utilisateur</Text>
+            <View style={styles.formSection}>
+              {/* Username */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.muted }]}>Nom d'utilisateur</Text>
                 <TextInput
                   placeholder="Entrez votre nom d'utilisateur"
                   placeholderTextColor={colors.muted}
                   value={username}
                   onChangeText={setUsername}
                   editable={!isLoading}
-                  style={{
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                    borderWidth: 1,
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    fontSize: 16,
-                    color: colors.foreground,
-                  }}
+                  returnKeyType="next"
+                  style={[
+                    styles.input,
+                    { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground },
+                  ]}
                 />
               </View>
 
-              {/* Password Input */}
-              <View>
-                <Text className="text-sm font-medium text-muted mb-2">Mot de passe</Text>
+              {/* Password */}
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.muted }]}>Mot de passe</Text>
                 <View
-                  style={{
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                    borderWidth: 1,
-                    borderRadius: 12,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingHorizontal: 16,
-                  }}
+                  style={[
+                    styles.passwordRow,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
                 >
                   <TextInput
                     placeholder="Entrez votre mot de passe"
@@ -114,19 +114,16 @@ export default function LoginScreen() {
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
                     editable={!isLoading}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 12,
-                      fontSize: 16,
-                      color: colors.foreground,
-                    }}
+                    returnKeyType="done"
+                    onSubmitEditing={handleLogin}
+                    style={[styles.passwordInput, { color: colors.foreground }]}
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
-                    style={{ padding: 8 }}
+                    style={styles.eyeButton}
                   >
-                    <Text style={{ fontSize: 20 }}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
+                    <Text style={styles.eyeIcon}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -136,39 +133,34 @@ export default function LoginScreen() {
             <TouchableOpacity
               onPress={handleLogin}
               disabled={isLoading}
-              style={{
-                backgroundColor: colors.primary,
-                paddingVertical: 14,
-                borderRadius: 12,
-                alignItems: "center",
-                marginBottom: 16,
-                opacity: isLoading ? 0.6 : 1,
-              }}
+              style={[
+                styles.loginButton,
+                { backgroundColor: colors.primary, opacity: isLoading ? 0.6 : 1 },
+              ]}
               activeOpacity={0.8}
             >
               {isLoading ? (
                 <ActivityIndicator size="small" color="white" />
               ) : (
-                <Text className="text-white text-base font-semibold">Se connecter</Text>
+                <Text style={styles.loginButtonText}>Se connecter</Text>
               )}
             </TouchableOpacity>
 
             {/* Demo Credentials */}
             <View
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: 12,
-                padding: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
+              style={[
+                styles.demoBox,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
             >
-              <Text className="text-xs font-medium text-muted mb-2">Identifiants de démonstration:</Text>
-              <Text className="text-xs text-muted mb-1">
-                <Text className="font-semibold">Admin:</Text> admin / admin123
+              <Text style={[styles.demoTitle, { color: colors.muted }]}>
+                Identifiants de demonstration:
               </Text>
-              <Text className="text-xs text-muted">
-                <Text className="font-semibold">Chauffeur:</Text> driver1 / driver123
+              <Text style={[styles.demoText, { color: colors.muted }]}>
+                <Text style={styles.demoBold}>Admin:</Text> admin / admin123
+              </Text>
+              <Text style={[styles.demoText, { color: colors.muted }]}>
+                <Text style={styles.demoBold}>Chauffeur:</Text> driver1 / driver123
               </Text>
             </View>
           </View>
@@ -177,3 +169,91 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  content: {
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  logoSection: {
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  logoEmoji: {
+    fontSize: 56,
+    marginBottom: 8,
+  },
+  appName: {
+    fontSize: 32,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  appSubtitle: {
+    fontSize: 15,
+    textAlign: "center",
+  },
+  formSection: {
+    marginBottom: 20,
+  },
+  fieldGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "500",
+    marginBottom: 8,
+  },
+  input: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    fontSize: 16,
+    borderWidth: 1,
+  },
+  passwordRow: {
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 13,
+    fontSize: 16,
+  },
+  eyeButton: {
+    padding: 8,
+  },
+  eyeIcon: {
+    fontSize: 20,
+  },
+  loginButton: {
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  loginButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  demoBox: {
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+  },
+  demoTitle: {
+    fontSize: 12,
+    fontWeight: "500",
+    marginBottom: 6,
+  },
+  demoText: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  demoBold: {
+    fontWeight: "600",
+  },
+});

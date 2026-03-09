@@ -1,5 +1,16 @@
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Alert, Share, Platform, Image } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Share,
+  Platform,
+  Image,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
@@ -54,7 +65,7 @@ export default function DeliveryDetailScreen() {
     if (!delivery) return "";
 
     return `
-RAPPORT DE LIVRAISON D'URÉE
+RAPPORT DE LIVRAISON D'UREE
 ${"=".repeat(40)}
 
 CLIENT
@@ -62,17 +73,17 @@ Nom: ${delivery.clientName}
 ${delivery.clientCompany ? `Compagnie: ${delivery.clientCompany}` : ""}
 ${delivery.siteName ? `\nSITE\n${delivery.siteName}` : ""}
 
-DÉTAILS DE LA LIVRAISON
+DETAILS DE LA LIVRAISON
 Date: ${formatDateTime(delivery.startTime)}
-Heure de début: ${new Date(delivery.startTime).toLocaleTimeString("fr-CA")}
+Heure de debut: ${new Date(delivery.startTime).toLocaleTimeString("fr-CA")}
 Heure de fin: ${new Date(delivery.endTime).toLocaleTimeString("fr-CA")}
-Durée: ${formatDuration(delivery.startTime, delivery.endTime)}
+Duree: ${formatDuration(delivery.startTime, delivery.endTime)}
 
-QUANTITÉ LIVRÉE
+QUANTITE LIVREE
 ${delivery.litersDelivered} litres
 
 ${"=".repeat(40)}
-Généré le ${new Date().toLocaleString("fr-CA")}
+Genere le ${new Date().toLocaleString("fr-CA")}
     `.trim();
   };
 
@@ -94,8 +105,8 @@ Généré le ${new Date().toLocaleString("fr-CA")}
   if (!delivery) {
     return (
       <ScreenContainer>
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-muted">Chargement...</Text>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </ScreenContainer>
     );
@@ -103,9 +114,9 @@ Généré le ${new Date().toLocaleString("fr-CA")}
 
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
-      <View className="flex-1">
+      <View style={styles.container}>
         {/* Header */}
-        <View className="flex-row items-center px-4 py-3 border-b border-border">
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity
             onPress={() => {
               if (Platform.OS !== "web") {
@@ -113,85 +124,89 @@ Généré le ${new Date().toLocaleString("fr-CA")}
               }
               router.back();
             }}
-            style={{ opacity: 1 }}
             activeOpacity={0.6}
           >
-            <Text className="text-primary text-base font-medium">Retour</Text>
+            <Text style={[styles.backText, { color: colors.primary }]}>Retour</Text>
           </TouchableOpacity>
-          <Text className="flex-1 text-lg font-semibold text-foreground text-center">
-            Détails de la livraison
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+            Details de la livraison
           </Text>
           <View style={{ width: 60 }} />
         </View>
 
         {/* Content */}
-        <ScrollView className="flex-1 px-6 pt-6">
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           {/* Client Info */}
-          <View className="bg-surface rounded-2xl p-5 mb-4 border border-border">
-            <Text className="text-sm font-medium text-muted mb-2">CLIENT</Text>
-            <Text className="text-xl font-bold text-foreground mb-1">{delivery.clientName}</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardLabel, { color: colors.muted }]}>CLIENT</Text>
+            <Text style={[styles.clientName, { color: colors.foreground }]}>{delivery.clientName}</Text>
             {delivery.clientCompany ? (
-              <Text className="text-base text-muted mb-2">{delivery.clientCompany}</Text>
+              <Text style={[styles.clientCompany, { color: colors.muted }]}>{delivery.clientCompany}</Text>
             ) : null}
             {delivery.siteName ? (
-              <View className="mt-2 pt-2 border-t border-border">
-                <Text className="text-sm font-medium text-muted mb-1">SITE</Text>
-                <Text className="text-base font-semibold text-foreground">{delivery.siteName}</Text>
+              <View style={[styles.siteDivider, { borderTopColor: colors.border }]}>
+                <Text style={[styles.cardLabel, { color: colors.muted }]}>SITE</Text>
+                <Text style={[styles.siteNameText, { color: colors.foreground }]}>{delivery.siteName}</Text>
               </View>
             ) : null}
           </View>
 
           {/* Delivery Details */}
-          <View className="bg-surface rounded-2xl p-5 mb-4 border border-border">
-            <Text className="text-sm font-medium text-muted mb-3">DÉTAILS</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardLabel, { color: colors.muted }]}>DETAILS</Text>
 
-            <View className="mb-3">
-              <Text className="text-sm text-muted mb-1">Heure de début</Text>
-              <Text className="text-base font-semibold text-foreground">
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: colors.muted }]}>Heure de debut</Text>
+              <Text style={[styles.detailValue, { color: colors.foreground }]}>
                 {formatDateTime(delivery.startTime)}
               </Text>
             </View>
 
-            <View className="mb-3">
-              <Text className="text-sm text-muted mb-1">Heure de fin</Text>
-              <Text className="text-base font-semibold text-foreground">
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: colors.muted }]}>Heure de fin</Text>
+              <Text style={[styles.detailValue, { color: colors.foreground }]}>
                 {formatDateTime(delivery.endTime)}
               </Text>
             </View>
 
             <View>
-              <Text className="text-sm text-muted mb-1">Durée totale</Text>
-              <Text className="text-base font-semibold text-foreground">
+              <Text style={[styles.detailLabel, { color: colors.muted }]}>Duree totale</Text>
+              <Text style={[styles.detailValue, { color: colors.foreground }]}>
                 {formatDuration(delivery.startTime, delivery.endTime)}
               </Text>
             </View>
           </View>
 
           {/* Photos Section */}
-          <View className="mb-6">
-            <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-lg font-bold text-foreground">Photos de livraison</Text>
-              {delivery.photos && delivery.photos.length > 0 && (
-                <Text className="text-sm text-muted">({delivery.photos.length})</Text>
-              )}
+          <View style={styles.photosSection}>
+            <View style={styles.photosSectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Photos de livraison</Text>
+              {delivery.photos && delivery.photos.length > 0 ? (
+                <Text style={[styles.photosCount, { color: colors.muted }]}>
+                  ({delivery.photos.length})
+                </Text>
+              ) : null}
             </View>
-            
+
             {delivery.photos && delivery.photos.length > 0 ? (
-              <View className="mb-4">
-                <View className="flex-row flex-wrap gap-2">
-                  {delivery.photos.map((photo, index) => (
-                    <View key={index} className="rounded-lg overflow-hidden border border-border bg-surface">
-                      <Image source={{ uri: photo }} className="w-32 h-32" resizeMode="cover" />
-                    </View>
-                  ))}
-                </View>
+              <View style={styles.photosGrid}>
+                {delivery.photos.map((photo, index) => (
+                  <View
+                    key={index}
+                    style={[styles.photoWrapper, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                  >
+                    <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
+                  </View>
+                ))}
               </View>
             ) : (
-              <View className="bg-surface rounded-lg p-4 mb-4">
-                <Text className="text-muted text-center">Aucune photo pour cette livraison</Text>
+              <View style={[styles.noPhotos, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.noPhotosText, { color: colors.muted }]}>
+                  Aucune photo pour cette livraison
+                </Text>
               </View>
             )}
-            
+
             <TouchableOpacity
               onPress={() => {
                 if (Platform.OS !== "web") {
@@ -206,23 +221,18 @@ Généré le ${new Date().toLocaleString("fr-CA")}
                   },
                 });
               }}
-              style={{
-                backgroundColor: colors.primary,
-                paddingVertical: 12,
-                borderRadius: 12,
-                alignItems: "center",
-              }}
+              style={[styles.actionButton, { backgroundColor: colors.primary }]}
               activeOpacity={0.8}
             >
-              <Text className="text-white text-base font-semibold">+ Ajouter des photos</Text>
+              <Text style={styles.actionButtonText}>+ Ajouter des photos</Text>
             </TouchableOpacity>
           </View>
 
           {/* Liters Delivered */}
-          <View className="bg-primary rounded-2xl p-6 mb-6 items-center">
-            <Text className="text-white text-sm font-medium mb-2">LITRES LIVRÉS</Text>
-            <Text className="text-white text-5xl font-bold">{delivery.litersDelivered}</Text>
-            <Text className="text-white text-lg mt-1">litres</Text>
+          <View style={[styles.litersCard, { backgroundColor: colors.primary }]}>
+            <Text style={styles.litersLabel}>LITRES LIVRES</Text>
+            <Text style={styles.litersValue}>{delivery.litersDelivered}</Text>
+            <Text style={styles.litersUnit}>litres</Text>
           </View>
 
           {/* Create Invoice Button */}
@@ -236,34 +246,174 @@ Généré le ${new Date().toLocaleString("fr-CA")}
                 params: { deliveryId: delivery.id },
               });
             }}
-            style={{
-              backgroundColor: colors.primary,
-              paddingVertical: 14,
-              borderRadius: 12,
-              alignItems: "center",
-              marginBottom: 12,
-            }}
+            style={[styles.actionButton, { backgroundColor: colors.primary, marginBottom: 12 }]}
             activeOpacity={0.8}
           >
-            <Text className="text-white text-base font-semibold">Creer/Regenerer Facture</Text>
+            <Text style={styles.actionButtonText}>Creer/Regenerer Facture</Text>
           </TouchableOpacity>
 
           {/* Share Button */}
           <TouchableOpacity
             onPress={handleShare}
-            style={{
-              backgroundColor: colors.primary,
-              paddingVertical: 14,
-              borderRadius: 12,
-              alignItems: "center",
-              marginBottom: 20,
-            }}
+            style={[styles.actionButton, { backgroundColor: colors.primary, marginBottom: 20 }]}
             activeOpacity={0.8}
           >
-            <Text className="text-white text-base font-semibold">Partager / Imprimer</Text>
+            <Text style={styles.actionButtonText}>Partager / Imprimer</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  backText: {
+    fontSize: 15,
+    fontWeight: "500",
+    width: 60,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  card: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  cardLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  clientName: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  clientCompany: {
+    fontSize: 15,
+    marginBottom: 8,
+  },
+  siteDivider: {
+    borderTopWidth: 1,
+    paddingTop: 12,
+    marginTop: 8,
+  },
+  siteNameText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  detailRow: {
+    marginBottom: 12,
+  },
+  detailLabel: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  photosSection: {
+    marginBottom: 20,
+  },
+  photosSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "bold",
+  },
+  photosCount: {
+    fontSize: 13,
+  },
+  photosGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  photoWrapper: {
+    borderRadius: 8,
+    overflow: "hidden",
+    borderWidth: 1,
+  },
+  photo: {
+    width: 120,
+    height: 120,
+  },
+  noPhotos: {
+    borderRadius: 10,
+    padding: 16,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  noPhotosText: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  litersCard: {
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  litersLabel: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  litersValue: {
+    color: "#fff",
+    fontSize: 52,
+    fontWeight: "bold",
+  },
+  litersUnit: {
+    color: "#fff",
+    fontSize: 18,
+    marginTop: 4,
+  },
+  actionButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 0,
+  },
+  actionButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+});
