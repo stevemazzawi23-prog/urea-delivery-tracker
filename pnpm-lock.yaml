@@ -189,9 +189,6 @@ importers:
       '@types/react':
         specifier: ~19.1.17
         version: 19.1.17
-      '@types/socket.io':
-        specifier: ^3.0.2
-        version: 3.0.2
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -2286,10 +2283,6 @@ packages:
 
   '@types/serve-static@1.15.10':
     resolution: {integrity: sha512-tRs1dB+g8Itk72rlSI2ZrW6vZg0YrLI81iQSTkMmOqnqCaNr/8Ek4VwWcN5vZgCYWbg/JJSGBlUaYGAOP73qBw==}
-
-  '@types/socket.io@3.0.2':
-    resolution: {integrity: sha512-pu0sN9m5VjCxBZVK8hW37ZcMe8rjn4HHggBN5CbaRTvFwv5jOmuIRZEuddsBPa9Th0ts0SIo3Niukq+95cMBbQ==}
-    deprecated: This is a stub types definition. socket.io provides its own type definitions, so you do not need this installed.
 
   '@types/stack-utils@2.0.3':
     resolution: {integrity: sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==}
@@ -8403,14 +8396,6 @@ snapshots:
       '@types/http-errors': 2.0.5
       '@types/node': 22.19.3
       '@types/send': 0.17.6
-
-  '@types/socket.io@3.0.2':
-    dependencies:
-      socket.io: 4.8.3
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
 
   '@types/stack-utils@2.0.3': {}
 
