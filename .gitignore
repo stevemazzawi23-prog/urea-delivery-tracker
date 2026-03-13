@@ -34,6 +34,9 @@ yarn-error.*
 .env*.local
 .env
 
+# Keep package-lock.json for EAS Build compatibility
+# package-lock.json
+
 # typescript
 *.tsbuildinfo
 
