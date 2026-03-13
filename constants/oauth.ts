@@ -25,17 +25,23 @@ export const OWNER_NAME = env.ownerName;
 export const API_BASE_URL = env.apiBaseUrl;
 
 /**
- * Get the API base URL, deriving from current hostname if not set.
- * Metro runs on 8081, API server runs on 3000.
- * URL pattern: https://PORT-sandboxid.region.domain
+ * Get the API base URL.
+ *
+ * Priority order:
+ *  1. EXPO_PUBLIC_API_BASE_URL env variable  (set this to your VPS URL for production builds)
+ *  2. On web: derive from current hostname by replacing port 8081 with 3000
+ *  3. Empty string (relative URL, dev only)
+ *
+ * For Android/iOS APK production builds, set in .env:
+ *   EXPO_PUBLIC_API_BASE_URL=http://YOUR_VPS_IP:3000
  */
 export function getApiBaseUrl(): string {
-  // If API_BASE_URL is set, use it
+  // 1. Explicit env variable (covers Android/iOS APK pointing to VPS)
   if (API_BASE_URL) {
     return API_BASE_URL.replace(/\/$/, "");
   }
 
-  // On web, derive from current hostname by replacing port 8081 with 3000
+  // 2. On web, derive from current hostname by replacing port 8081 with 3000
   if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
     const { protocol, hostname } = window.location;
     // Pattern: 8081-sandboxid.region.domain -> 3000-sandboxid.region.domain
@@ -45,7 +51,7 @@ export function getApiBaseUrl(): string {
     }
   }
 
-  // Fallback to empty (will use relative URL)
+  // 3. Fallback to empty (relative URL, local dev)
   return "";
 }
 

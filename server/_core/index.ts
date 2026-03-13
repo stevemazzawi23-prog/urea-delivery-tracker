@@ -1,11 +1,15 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
+import { Server as SocketIOServer } from "socket.io";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+
+// Export socket.io instance so routers can emit events
+export let io: SocketIOServer | null = null;
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -30,11 +34,40 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  // ============================================================
+  // Socket.io - Real-time synchronisation between devices
+  // ============================================================
+  io = new SocketIOServer(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+    path: "/socket.io",
+  });
+
+  io.on("connection", (socket) => {
+    console.log(`[Socket.io] Client connected: ${socket.id}`);
+
+    // Each client joins a "room" based on their userId so we can
+    // broadcast only to users of the same account.
+    socket.on("join", (userId: string) => {
+      socket.join(`user:${userId}`);
+      console.log(`[Socket.io] Socket ${socket.id} joined room user:${userId}`);
+    });
+
+    socket.on("disconnect", () => {
+      console.log(`[Socket.io] Client disconnected: ${socket.id}`);
+    });
+  });
+
   // Enable CORS for all routes - reflect the request origin to support credentials
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (origin) {
       res.header("Access-Control-Allow-Origin", origin);
+    } else {
+      res.header("Access-Control-Allow-Origin", "*");
     }
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.header(
@@ -57,7 +90,7 @@ async function startServer() {
   registerOAuthRoutes(app);
 
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, timestamp: Date.now() });
+    res.json({ ok: true, timestamp: Date.now(), socketio: io !== null });
   });
 
   app.use(
@@ -77,6 +110,7 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`[api] server listening on port ${port}`);
+    console.log(`[Socket.io] WebSocket server ready on port ${port}`);
   });
 }
 

@@ -1,4 +1,6 @@
 import { useState, useCallback } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { useSocket } from "@/hooks/use-socket";
 import {
   View,
   Text,
@@ -29,7 +31,14 @@ type TabType = "deliveries" | "invoices";
 export default function HistoryScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>("deliveries");
+
+  // ── Real-time sync: reload when another device makes changes ──
+  useSocket(user?.id, {
+    onDeliveriesUpdated: () => loadData(),
+    onInvoicesUpdated: () => loadData(),
+  });
   const [refreshing, setRefreshing] = useState(false);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
