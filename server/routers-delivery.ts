@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
+import { io } from "./_core/index";
+
+// Helper: broadcast a real-time event to all devices of the same user
+function broadcast(userId: number, event: string, data: unknown) {
+  if (io) {
+    io.to(`user:${userId}`).emit(event, data);
+    console.log(`[Socket.io] Broadcast "${event}" to room user:${userId}`);
+  }
+}
 
 export const deliveryRouter = router({
   // Get all clients for current user
@@ -25,8 +34,8 @@ export const deliveryRouter = router({
       email: z.string().email().optional(),
       notes: z.string().optional(),
     }))
-    .mutation(({ ctx, input }) => {
-      return db.createClient(ctx.user.id, {
+    .mutation(async ({ ctx, input }) => {
+      const id = await db.createClient(ctx.user.id, {
         name: input.name,
         company: input.company || null,
         phone: input.phone || null,
@@ -34,6 +43,8 @@ export const deliveryRouter = router({
         email: input.email || null,
         notes: input.notes || null,
       });
+      broadcast(ctx.user.id, "clients:updated", { action: "create", id });
+      return id;
     }),
 
   // Update client
@@ -47,8 +58,8 @@ export const deliveryRouter = router({
       email: z.string().email().optional(),
       notes: z.string().optional(),
     }))
-    .mutation(({ input }) => {
-      return db.updateClient(input.clientId, {
+    .mutation(async ({ ctx, input }) => {
+      await db.updateClient(input.clientId, {
         name: input.name,
         company: input.company || null,
         phone: input.phone || null,
@@ -56,13 +67,15 @@ export const deliveryRouter = router({
         email: input.email || null,
         notes: input.notes || null,
       });
+      broadcast(ctx.user.id, "clients:updated", { action: "update", id: input.clientId });
     }),
 
   // Delete client
   deleteClient: protectedProcedure
     .input(z.object({ clientId: z.number() }))
-    .mutation(({ input }) => {
-      return db.deleteClient(input.clientId);
+    .mutation(async ({ ctx, input }) => {
+      await db.deleteClient(input.clientId);
+      broadcast(ctx.user.id, "clients:updated", { action: "delete", id: input.clientId });
     }),
 
   // Get sites for client
@@ -79,8 +92,10 @@ export const deliveryRouter = router({
       name: z.string().min(1),
       address: z.string().optional(),
     }))
-    .mutation(({ input }) => {
-      return db.createSite(input.clientId, input.name, input.address || null);
+    .mutation(async ({ ctx, input }) => {
+      const id = await db.createSite(input.clientId, input.name, input.address || null);
+      broadcast(ctx.user.id, "sites:updated", { action: "create", id, clientId: input.clientId });
+      return id;
     }),
 
   // Update site
@@ -90,15 +105,17 @@ export const deliveryRouter = router({
       name: z.string().min(1).optional(),
       address: z.string().optional(),
     }))
-    .mutation(({ input }) => {
-      return db.updateSite(input.siteId, input.name, input.address || null);
+    .mutation(async ({ ctx, input }) => {
+      await db.updateSite(input.siteId, input.name, input.address || null);
+      broadcast(ctx.user.id, "sites:updated", { action: "update", id: input.siteId });
     }),
 
   // Delete site
   deleteSite: protectedProcedure
     .input(z.object({ siteId: z.number() }))
-    .mutation(({ input }) => {
-      return db.deleteSite(input.siteId);
+    .mutation(async ({ ctx, input }) => {
+      await db.deleteSite(input.siteId);
+      broadcast(ctx.user.id, "sites:updated", { action: "delete", id: input.siteId });
     }),
 
   // Get all deliveries for current user
@@ -124,8 +141,8 @@ export const deliveryRouter = router({
       driverName: z.string().optional(),
       startTime: z.date(),
     }))
-    .mutation(({ ctx, input }) => {
-      return db.createDelivery(ctx.user.id, {
+    .mutation(async ({ ctx, input }) => {
+      const id = await db.createDelivery(ctx.user.id, {
         clientId: input.clientId,
         clientName: input.clientName,
         clientCompany: input.clientCompany || null,
@@ -134,6 +151,14 @@ export const deliveryRouter = router({
         driverName: input.driverName || null,
         startTime: input.startTime,
       });
+      broadcast(ctx.user.id, "deliveries:updated", {
+        action: "create",
+        id,
+        clientName: input.clientName,
+        siteName: input.siteName || null,
+        driverName: input.driverName || null,
+      });
+      return id;
     }),
 
   // Update delivery (end delivery, add photos, etc)
@@ -143,22 +168,29 @@ export const deliveryRouter = router({
       endTime: z.date().optional(),
       litersDelivered: z.number().optional(),
       driverName: z.string().optional(),
-      photos: z.array(z.string()).optional(), // Array of photo URLs
+      photos: z.array(z.string()).optional(),
     }))
-    .mutation(({ input }) => {
-      return db.updateDelivery(input.deliveryId, {
+    .mutation(async ({ ctx, input }) => {
+      await db.updateDelivery(input.deliveryId, {
         endTime: input.endTime,
         litersDelivered: input.litersDelivered,
         driverName: input.driverName,
         photos: input.photos,
+      });
+      broadcast(ctx.user.id, "deliveries:updated", {
+        action: "update",
+        id: input.deliveryId,
+        litersDelivered: input.litersDelivered,
+        endTime: input.endTime,
       });
     }),
 
   // Delete delivery
   deleteDelivery: protectedProcedure
     .input(z.object({ deliveryId: z.number() }))
-    .mutation(({ input }) => {
-      return db.deleteDelivery(input.deliveryId);
+    .mutation(async ({ ctx, input }) => {
+      await db.deleteDelivery(input.deliveryId);
+      broadcast(ctx.user.id, "deliveries:updated", { action: "delete", id: input.deliveryId });
     }),
 
   // Send POD email
@@ -177,7 +209,6 @@ export const deliveryRouter = router({
         throw new Error("Client email not configured");
       }
 
-      // Build email content
       const deliveryDate = new Date(info.delivery.startTime).toLocaleString('fr-FR');
       const endDate = info.delivery.endTime ? new Date(info.delivery.endTime).toLocaleString('fr-FR') : 'N/A';
       const duration = info.delivery.endTime 
@@ -204,8 +235,6 @@ export const deliveryRouter = router({
         <p><em>Cet email a été généré automatiquement. Veuillez ne pas répondre.</em></p>
       `;
 
-      // For now, just return success
-      // In production, integrate with SendGrid, SMTP, or other email service
       console.log(`[POD EMAIL] Sending to ${info.client.email}:`, emailBody);
       
       return {

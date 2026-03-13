@@ -1,4 +1,33 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  apiListClients,
+  apiCreateClient,
+  apiUpdateClient,
+  apiDeleteClient,
+  apiListSites,
+  apiCreateSite,
+  apiUpdateSite,
+  apiDeleteSite,
+  apiListDeliveries,
+  apiCreateDelivery,
+  apiUpdateDelivery,
+  apiDeleteDelivery,
+  apiListInvoices,
+  apiCreateInvoice,
+  apiUpdateInvoiceStatus as apiUpdateInvoiceStatusFn,
+  apiDeleteInvoice,
+  ApiClient,
+  ApiSite,
+  ApiDelivery,
+  ApiInvoice,
+} from "./api-client";
+import { getAuthToken } from "./auth-context";
+
+// Check if we should use API (token available)
+async function shouldUseApi(): Promise<boolean> {
+  const token = await getAuthToken();
+  return !!token;
+}
 
 // Data Models
 export interface Driver {
@@ -84,8 +113,86 @@ const SITES_KEY = "@urea_delivery_sites";
 const DELIVERIES_KEY = "@urea_delivery_deliveries";
 const INVOICES_KEY = "@urea_delivery_invoices";
 
+// ============================================================
+// API -> Local type converters
+// ============================================================
+function apiClientToLocal(c: ApiClient): Client {
+  return {
+    id: String(c.id),
+    name: c.name,
+    company: c.company ?? "",
+    phone: c.phone ?? "",
+    address: c.address ?? "",
+    email: c.email ?? undefined,
+    notes: c.notes ?? "",
+    createdAt: new Date(c.createdAt).getTime(),
+  };
+}
+
+function apiSiteToLocal(s: ApiSite): Site {
+  return {
+    id: String(s.id),
+    clientId: String(s.clientId),
+    name: s.name,
+    address: s.address ?? "",
+    createdAt: new Date(s.createdAt).getTime(),
+  };
+}
+
+function apiDeliveryToLocal(d: ApiDelivery): Delivery {
+  return {
+    id: String(d.id),
+    clientId: String(d.clientId),
+    clientName: d.clientName,
+    clientCompany: d.clientCompany ?? "",
+    siteId: String(d.siteId ?? ""),
+    siteName: d.siteName ?? "",
+    driverName: d.driverName ?? undefined,
+    startTime: new Date(d.startTime).getTime(),
+    endTime: d.endTime ? new Date(d.endTime).getTime() : 0,
+    units: [],
+    litersDelivered: d.litersDelivered,
+    photos: d.photos ?? [],
+    createdAt: new Date(d.createdAt).getTime(),
+  };
+}
+
+function apiInvoiceToLocal(inv: ApiInvoice): Invoice {
+  return {
+    id: String(inv.id),
+    deliveryId: String(inv.deliveryId),
+    clientId: String(inv.clientId),
+    clientName: inv.clientName,
+    clientEmail: inv.clientEmail ?? undefined,
+    clientAddress: inv.clientAddress ?? undefined,
+    invoiceNumber: inv.invoiceNumber,
+    invoiceDate: new Date(inv.invoiceDate).getTime(),
+    // API stores values in cents, convert back to dollars
+    serviceFee: inv.serviceFee / 100,
+    pricePerLiter: inv.pricePerLiter / 100,
+    litersDelivered: inv.litersDelivered,
+    subtotal: inv.subtotal / 100,
+    gst: inv.gst / 100,
+    qst: inv.qst / 100,
+    total: inv.total / 100,
+    status: inv.status,
+    createdAt: new Date(inv.createdAt).getTime(),
+  };
+}
+
 // Client Functions
 export async function getClients(): Promise<Client[]> {
+  try {
+    if (await shouldUseApi()) {
+      const apiClients = await apiListClients();
+      const localClients = apiClients.map(apiClientToLocal);
+      // Cache locally
+      await AsyncStorage.setItem(CLIENTS_KEY, JSON.stringify(localClients)).catch(() => {});
+      return localClients;
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for getClients, using local:", error);
+  }
   try {
     const data = await AsyncStorage.getItem(CLIENTS_KEY);
     return data ? JSON.parse(data) : [];
@@ -97,12 +204,23 @@ export async function getClients(): Promise<Client[]> {
 
 export async function saveClient(client: Omit<Client, "id" | "createdAt">): Promise<Client> {
   try {
+    if (await shouldUseApi()) {
+      const apiId = await apiCreateClient({
+        name: client.name,
+        company: client.company || undefined,
+        phone: client.phone || undefined,
+        address: client.address || undefined,
+        email: client.email || undefined,
+        notes: client.notes || undefined,
+      });
+      return { ...client, id: String(apiId), createdAt: Date.now() };
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for saveClient, using local:", error);
+  }
+  try {
     const clients = await getClients();
-    const newClient: Client = {
-      ...client,
-      id: Date.now().toString(),
-      createdAt: Date.now(),
-    };
+    const newClient: Client = { ...client, id: Date.now().toString(), createdAt: Date.now() };
     clients.push(newClient);
     await AsyncStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
     return newClient;
@@ -113,6 +231,24 @@ export async function saveClient(client: Omit<Client, "id" | "createdAt">): Prom
 }
 
 export async function updateClient(id: string, updates: Partial<Client>): Promise<void> {
+  try {
+    if (await shouldUseApi()) {
+      const apiId = parseInt(id);
+      if (!isNaN(apiId)) {
+        await apiUpdateClient(apiId, {
+          name: updates.name,
+          company: updates.company || undefined,
+          phone: updates.phone || undefined,
+          address: updates.address || undefined,
+          email: updates.email || undefined,
+          notes: updates.notes || undefined,
+        });
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for updateClient, using local:", error);
+  }
   try {
     const clients = await getClients();
     const index = clients.findIndex((c) => c.id === id);
@@ -127,6 +263,17 @@ export async function updateClient(id: string, updates: Partial<Client>): Promis
 }
 
 export async function deleteClient(id: string): Promise<void> {
+  try {
+    if (await shouldUseApi()) {
+      const apiId = parseInt(id);
+      if (!isNaN(apiId)) {
+        await apiDeleteClient(apiId);
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for deleteClient, using local:", error);
+  }
   try {
     const clients = await getClients();
     const filtered = clients.filter((c) => c.id !== id);
@@ -150,12 +297,23 @@ export async function getSites(): Promise<Site[]> {
 
 export async function saveSite(site: Omit<Site, "id" | "createdAt">): Promise<Site> {
   try {
+    if (await shouldUseApi()) {
+      const clientApiId = parseInt(site.clientId);
+      if (!isNaN(clientApiId)) {
+        const apiId = await apiCreateSite({
+          clientId: clientApiId,
+          name: site.name,
+          address: site.address || undefined,
+        });
+        return { ...site, id: String(apiId), createdAt: Date.now() };
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for saveSite, using local:", error);
+  }
+  try {
     const sites = await getSites();
-    const newSite: Site = {
-      ...site,
-      id: Date.now().toString(),
-      createdAt: Date.now(),
-    };
+    const newSite: Site = { ...site, id: Date.now().toString(), createdAt: Date.now() };
     sites.push(newSite);
     await AsyncStorage.setItem(SITES_KEY, JSON.stringify(sites));
     return newSite;
@@ -166,6 +324,20 @@ export async function saveSite(site: Omit<Site, "id" | "createdAt">): Promise<Si
 }
 
 export async function updateSite(id: string, updates: Partial<Site>): Promise<void> {
+  try {
+    if (await shouldUseApi()) {
+      const apiId = parseInt(id);
+      if (!isNaN(apiId)) {
+        await apiUpdateSite(apiId, {
+          name: updates.name,
+          address: updates.address || undefined,
+        });
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for updateSite, using local:", error);
+  }
   try {
     const sites = await getSites();
     const index = sites.findIndex((s) => s.id === id);
@@ -181,6 +353,17 @@ export async function updateSite(id: string, updates: Partial<Site>): Promise<vo
 
 export async function deleteSite(id: string): Promise<void> {
   try {
+    if (await shouldUseApi()) {
+      const apiId = parseInt(id);
+      if (!isNaN(apiId)) {
+        await apiDeleteSite(apiId);
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for deleteSite, using local:", error);
+  }
+  try {
     const sites = await getSites();
     const filtered = sites.filter((s) => s.id !== id);
     await AsyncStorage.setItem(SITES_KEY, JSON.stringify(filtered));
@@ -191,6 +374,17 @@ export async function deleteSite(id: string): Promise<void> {
 }
 
 export async function getSitesByClient(clientId: string): Promise<Site[]> {
+  try {
+    if (await shouldUseApi()) {
+      const apiClientId = parseInt(clientId);
+      if (!isNaN(apiClientId)) {
+        const apiSites = await apiListSites(apiClientId);
+        return apiSites.map(apiSiteToLocal);
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for getSitesByClient, using local:", error);
+  }
   try {
     const sites = await getSites();
     return sites.filter((s) => s.clientId === clientId);
@@ -203,6 +397,14 @@ export async function getSitesByClient(clientId: string): Promise<Site[]> {
 // Delivery Functions
 export async function getDeliveries(): Promise<Delivery[]> {
   try {
+    if (await shouldUseApi()) {
+      const apiDeliveries = await apiListDeliveries();
+      return apiDeliveries.map(apiDeliveryToLocal);
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for getDeliveries, using local:", error);
+  }
+  try {
     const data = await AsyncStorage.getItem(DELIVERIES_KEY);
     return data ? JSON.parse(data) : [];
   } catch (error) {
@@ -213,12 +415,28 @@ export async function getDeliveries(): Promise<Delivery[]> {
 
 export async function saveDelivery(delivery: Omit<Delivery, "id" | "createdAt">): Promise<Delivery> {
   try {
+    if (await shouldUseApi()) {
+      const clientApiId = parseInt(delivery.clientId);
+      const siteApiId = delivery.siteId ? parseInt(delivery.siteId) : undefined;
+      if (!isNaN(clientApiId)) {
+        const apiId = await apiCreateDelivery({
+          clientId: clientApiId,
+          clientName: delivery.clientName,
+          clientCompany: delivery.clientCompany || undefined,
+          siteId: siteApiId && !isNaN(siteApiId) ? siteApiId : undefined,
+          siteName: delivery.siteName || undefined,
+          driverName: delivery.driverName || undefined,
+          startTime: new Date(delivery.startTime),
+        });
+        return { ...delivery, id: String(apiId), createdAt: Date.now() };
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for saveDelivery, using local:", error);
+  }
+  try {
     const deliveries = await getDeliveries();
-    const newDelivery: Delivery = {
-      ...delivery,
-      id: Date.now().toString(),
-      createdAt: Date.now(),
-    };
+    const newDelivery: Delivery = { ...delivery, id: Date.now().toString(), createdAt: Date.now() };
     deliveries.push(newDelivery);
     await AsyncStorage.setItem(DELIVERIES_KEY, JSON.stringify(deliveries));
     return newDelivery;
@@ -230,6 +448,17 @@ export async function saveDelivery(delivery: Omit<Delivery, "id" | "createdAt">)
 
 export async function deleteDelivery(id: string): Promise<void> {
   try {
+    if (await shouldUseApi()) {
+      const apiId = parseInt(id);
+      if (!isNaN(apiId)) {
+        await apiDeleteDelivery(apiId);
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for deleteDelivery, using local:", error);
+  }
+  try {
     const deliveries = await getDeliveries();
     const filtered = deliveries.filter((d) => d.id !== id);
     await AsyncStorage.setItem(DELIVERIES_KEY, JSON.stringify(filtered));
@@ -240,6 +469,22 @@ export async function deleteDelivery(id: string): Promise<void> {
 }
 
 export async function updateDelivery(id: string, updates: Partial<Delivery>): Promise<void> {
+  try {
+    if (await shouldUseApi()) {
+      const apiId = parseInt(id);
+      if (!isNaN(apiId)) {
+        await apiUpdateDelivery(apiId, {
+          endTime: updates.endTime ? new Date(updates.endTime) : undefined,
+          litersDelivered: updates.litersDelivered,
+          driverName: updates.driverName,
+          photos: updates.photos,
+        });
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for updateDelivery, using local:", error);
+  }
   try {
     const deliveries = await getDeliveries();
     const index = deliveries.findIndex((d) => d.id === id);
@@ -254,6 +499,14 @@ export async function updateDelivery(id: string, updates: Partial<Delivery>): Pr
 }
 
 export async function getDeliveriesByClient(clientId: string): Promise<Delivery[]> {
+  try {
+    if (await shouldUseApi()) {
+      const allDeliveries = await getDeliveries();
+      return allDeliveries.filter((d) => d.clientId === clientId);
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for getDeliveriesByClient, using local:", error);
+  }
   try {
     const deliveries = await getDeliveries();
     return deliveries.filter((d) => d.clientId === clientId);
@@ -299,6 +552,14 @@ export function calculateInvoice(litersDelivered: number) {
 // Invoice Functions
 export async function getInvoices(): Promise<Invoice[]> {
   try {
+    if (await shouldUseApi()) {
+      const apiInvoices = await apiListInvoices();
+      return apiInvoices.map(apiInvoiceToLocal);
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for getInvoices, using local:", error);
+  }
+  try {
     const data = await AsyncStorage.getItem(INVOICES_KEY);
     return data ? JSON.parse(data) : [];
   } catch (error) {
@@ -309,12 +570,36 @@ export async function getInvoices(): Promise<Invoice[]> {
 
 export async function saveInvoice(invoice: Omit<Invoice, "id" | "createdAt">): Promise<Invoice> {
   try {
+    if (await shouldUseApi()) {
+      const deliveryApiId = parseInt(invoice.deliveryId);
+      const clientApiId = parseInt(invoice.clientId);
+      if (!isNaN(deliveryApiId) && !isNaN(clientApiId)) {
+        const apiId = await apiCreateInvoice({
+          deliveryId: deliveryApiId,
+          clientId: clientApiId,
+          clientName: invoice.clientName,
+          clientEmail: invoice.clientEmail || undefined,
+          clientAddress: invoice.clientAddress || undefined,
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceDate: new Date(invoice.invoiceDate),
+          serviceFee: Math.round(invoice.serviceFee * 100),
+          pricePerLiter: Math.round(invoice.pricePerLiter * 100),
+          litersDelivered: invoice.litersDelivered,
+          subtotal: Math.round(invoice.subtotal * 100),
+          gst: Math.round(invoice.gst * 100),
+          qst: Math.round(invoice.qst * 100),
+          total: Math.round(invoice.total * 100),
+          status: invoice.status,
+        });
+        return { ...invoice, id: String(apiId), createdAt: Date.now() };
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for saveInvoice, using local:", error);
+  }
+  try {
     const invoices = await getInvoices();
-    const newInvoice: Invoice = {
-      ...invoice,
-      id: Date.now().toString(),
-      createdAt: Date.now(),
-    };
+    const newInvoice: Invoice = { ...invoice, id: Date.now().toString(), createdAt: Date.now() };
     invoices.push(newInvoice);
     await AsyncStorage.setItem(INVOICES_KEY, JSON.stringify(invoices));
     return newInvoice;
@@ -326,6 +611,14 @@ export async function saveInvoice(invoice: Omit<Invoice, "id" | "createdAt">): P
 
 export async function getInvoicesByDelivery(deliveryId: string): Promise<Invoice[]> {
   try {
+    if (await shouldUseApi()) {
+      const allInvoices = await getInvoices();
+      return allInvoices.filter((inv) => inv.deliveryId === deliveryId);
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for getInvoicesByDelivery, using local:", error);
+  }
+  try {
     const invoices = await getInvoices();
     return invoices.filter((inv) => inv.deliveryId === deliveryId);
   } catch (error) {
@@ -335,6 +628,17 @@ export async function getInvoicesByDelivery(deliveryId: string): Promise<Invoice
 }
 
 export async function updateInvoiceStatus(invoiceId: string, status: Invoice['status']): Promise<void> {
+  try {
+    if (await shouldUseApi()) {
+      const apiId = parseInt(invoiceId);
+      if (!isNaN(apiId)) {
+        await apiUpdateInvoiceStatusFn(apiId, status);
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for updateInvoiceStatus, using local:", error);
+  }
   try {
     const invoices = await getInvoices();
     const index = invoices.findIndex((inv) => inv.id === invoiceId);
@@ -349,6 +653,17 @@ export async function updateInvoiceStatus(invoiceId: string, status: Invoice['st
 }
 
 export async function deleteInvoice(invoiceId: string): Promise<void> {
+  try {
+    if (await shouldUseApi()) {
+      const apiId = parseInt(invoiceId);
+      if (!isNaN(apiId)) {
+        await apiDeleteInvoice(apiId);
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn("[Storage] API unavailable for deleteInvoice, using local:", error);
+  }
   try {
     const invoices = await getInvoices();
     const filtered = invoices.filter((inv) => inv.id !== invoiceId);

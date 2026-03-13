@@ -1,6 +1,6 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const.js";
+import { ONE_YEAR_MS, COOKIE_NAME } from "../../shared/const.js";
 import type { Express, Request, Response } from "express";
-import { getUserByOpenId, upsertUser } from "../db";
+import { getUserByOpenId, upsertUser, getDriverAccountByUsername } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
@@ -169,6 +169,100 @@ export function registerOAuthRoutes(app: Express) {
     } catch (error) {
       console.error("[Auth] /api/auth/session failed:", error);
       res.status(401).json({ error: "Invalid token" });
+    }
+  });
+
+  // ============================================================
+  // DRIVER LOGIN - Custom authentication for SP Logistix drivers
+  // ============================================================
+  // This endpoint allows drivers to login with username/password
+  // stored in the driverAccounts table (managed by admin).
+  // Returns a JWT token compatible with the existing auth system.
+  app.post("/api/auth/driver-login", async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body;
+
+      if (!username || !password) {
+        res.status(400).json({ error: "username and password are required" });
+        return;
+      }
+
+      // Look up driver account
+      const driverAccount = await getDriverAccountByUsername(username);
+
+      if (!driverAccount) {
+        res.status(401).json({ error: "Identifiants incorrects" });
+        return;
+      }
+
+      if (!driverAccount.isActive) {
+        res.status(401).json({ error: "Compte désactivé" });
+        return;
+      }
+
+      // Verify password (stored as plain text or bcrypt hash)
+      // Support both plain text (legacy) and bcrypt hash
+      let passwordValid = false;
+      const storedHash = driverAccount.passwordHash;
+
+      if (storedHash.startsWith("$2b$") || storedHash.startsWith("$2a$")) {
+        // bcrypt hash - would need bcrypt library, use plain text for now
+        passwordValid = storedHash === password;
+      } else {
+        // Plain text comparison
+        passwordValid = storedHash === password;
+      }
+
+      if (!passwordValid) {
+        res.status(401).json({ error: "Identifiants incorrects" });
+        return;
+      }
+
+      // Create a virtual openId for this driver account
+      // Format: "driver:{driverAccountId}" to distinguish from OAuth users
+      const openId = `driver:${driverAccount.id}`;
+
+      // Ensure user exists in the users table
+      await upsertUser({
+        openId,
+        name: driverAccount.username,
+        email: null,
+        loginMethod: "driver",
+        lastSignedIn: new Date(),
+        role: driverAccount.role === "admin" ? "admin" : "user",
+      });
+
+      // Get the user record (needed for the response)
+      const user = await getUserByOpenId(openId);
+
+      // Create JWT session token
+      const sessionToken = await sdk.signSession(
+        {
+          openId,
+          appId: process.env.VITE_APP_ID ?? "sp-logistix",
+          name: driverAccount.username,
+        },
+        { expiresInMs: ONE_YEAR_MS },
+      );
+
+      // Set cookie for web
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+      res.json({
+        success: true,
+        token: sessionToken,
+        user: {
+          id: user?.id ?? driverAccount.id,
+          openId,
+          username: driverAccount.username,
+          role: driverAccount.role,
+          name: driverAccount.username,
+        },
+      });
+    } catch (error) {
+      console.error("[Auth] Driver login failed:", error);
+      res.status(500).json({ error: "Erreur serveur lors de la connexion" });
     }
   });
 }

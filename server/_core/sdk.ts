@@ -253,19 +253,39 @@ class SDKServer {
 
     // If user not in DB, sync from OAuth server automatically
     if (!user) {
-      try {
-        const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
-        await db.upsertUser({
-          openId: userInfo.openId,
-          name: userInfo.name || null,
-          email: userInfo.email ?? null,
-          loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-          lastSignedIn: signedInAt,
-        });
-        user = await db.getUserByOpenId(userInfo.openId);
-      } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
-        throw ForbiddenError("Failed to sync user info");
+      // For driver accounts (openId starts with "driver:"), create user record directly
+      if (sessionUserId.startsWith("driver:")) {
+        const driverAccountId = parseInt(sessionUserId.replace("driver:", ""));
+        if (!isNaN(driverAccountId)) {
+          try {
+            await db.upsertUser({
+              openId: sessionUserId,
+              name: session.name || null,
+              email: null,
+              loginMethod: "driver",
+              lastSignedIn: signedInAt,
+            });
+            user = await db.getUserByOpenId(sessionUserId);
+          } catch (error) {
+            console.error("[Auth] Failed to create driver user record:", error);
+            throw ForbiddenError("Failed to create driver user record");
+          }
+        }
+      } else {
+        try {
+          const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
+          await db.upsertUser({
+            openId: userInfo.openId,
+            name: userInfo.name || null,
+            email: userInfo.email ?? null,
+            loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+            lastSignedIn: signedInAt,
+          });
+          user = await db.getUserByOpenId(userInfo.openId);
+        } catch (error) {
+          console.error("[Auth] Failed to sync user from OAuth:", error);
+          throw ForbiddenError("Failed to sync user info");
+        }
       }
     }
 

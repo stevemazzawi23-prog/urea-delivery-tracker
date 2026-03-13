@@ -6,6 +6,7 @@ import { useColors } from "@/hooks/use-colors";
 import { getDeliveries, getInvoices, getCurrentDriver, getActiveShift, endShift, setCurrentDriver } from "@/lib/storage";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useSocket } from "@/hooks/use-socket";
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -16,8 +17,22 @@ export default function HomeScreen() {
     totalLitersToday: 0,
     totalInvoices: 0,
   });
-  const [currentDriver, setCurrentDriver] = useState<any>(null);
+  const [currentDriver, setCurrentDriverState] = useState<any>(null);
   const [shiftTime, setShiftTime] = useState(0);
+
+  // ── Real-time sync via Socket.io ──────────────────────────────
+  useSocket(user?.id, {
+    onDeliveriesUpdated: () => {
+      loadStats();
+    },
+    onClientsUpdated: () => {
+      // Clients changed on another device – refresh stats silently
+      loadStats();
+    },
+    onInvoicesUpdated: () => {
+      loadStats();
+    },
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -46,7 +61,7 @@ export default function HomeScreen() {
   const loadDriver = async () => {
     try {
       const driver = await getCurrentDriver();
-      setCurrentDriver(driver);
+      setCurrentDriverState(driver);
     } catch (error) {
       console.error("Error loading driver:", error);
     }
@@ -100,7 +115,7 @@ export default function HomeScreen() {
           try {
             await endShift(currentDriver.id);
             await setCurrentDriver(null);
-            setCurrentDriver(null);
+            setCurrentDriverState(null);
             setShiftTime(0);
             setStats({
               deliveriesToday: 0,
@@ -217,8 +232,6 @@ export default function HomeScreen() {
               </View>
             </View>
 
-
-
             {/* Action Buttons */}
             <View style={{ flexDirection: "row", gap: 8 }}>
               <TouchableOpacity
@@ -323,7 +336,6 @@ export default function HomeScreen() {
         <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground, marginBottom: 12 }}>
           Actions rapides
         </Text>
-
 
         <TouchableOpacity
           onPress={() => handleNavigation("/delivery/select-client")}

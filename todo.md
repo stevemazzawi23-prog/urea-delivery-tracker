@@ -233,3 +233,12 @@
 - [x] Fix: impossible de sauvegarder plusieurs sites de livraison dans la carte client sur Android APK
 - [x] Fix: page blanche quand on démarre une livraison sans site sélectionné
 - [x] Fix: interface Android ne ressemble pas au simulateur (NativeWind className non rendu)
+
+## Bug Fixes - Auth & Sync v3
+- [x] Fix: app ouvre directement sur Driver1 au lieu de la page de connexion
+- [x] Fix: données non synchronisées entre appareils (toujours en AsyncStorage local)
+- [x] Add /api/auth/driver-login endpoint on VPS server
+- [x] Update auth-context.tsx to authenticate via VPS API
+- [x] Update storage.ts to sync data via VPS API (clients, sites, deliveries, invoices)
+- [x] Add api-client.ts for VPS tRPC calls with JWT Bearer token
+- [x] Fix sdk.ts to handle driver: openId prefix for tRPC protected procedures

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useSocket } from "@/hooks/use-socket";
 import {
   View,
   Text,
@@ -24,6 +25,13 @@ export default function ClientsScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+
+  // ── Real-time sync: reload when another device adds/edits/deletes a client ──
+  useSocket(user?.id, {
+    onClientsUpdated: () => loadClients(),
+    onSitesUpdated: () => loadClients(),
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);

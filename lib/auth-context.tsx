@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { logAuditAction } from "./audit-logger";
+import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
+import { getApiBaseUrl } from "@/constants/oauth";
 
 export type UserRole = "admin" | "driver";
 
@@ -8,6 +10,7 @@ export interface User {
   id: string;
   username: string;
   role: UserRole;
+  token?: string; // JWT token for API calls
 }
 
 interface AuthContextType {
@@ -25,175 +28,198 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USERS_KEY = "urea_users";
-const SESSION_KEY = "urea_session";
+const SESSION_KEY = "urea_session_v2";
+const TOKEN_KEY = "urea_api_token";
 
-// Log for debugging
-if (typeof window !== 'undefined') {
-  console.log('[Auth] AuthProvider initialized');
+// ============================================================
+// Token storage helpers (SecureStore on native, AsyncStorage on web)
+// ============================================================
+async function storeToken(token: string): Promise<void> {
+  try {
+    if (Platform.OS === "web") {
+      await AsyncStorage.setItem(TOKEN_KEY, token);
+    } else {
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
+    }
+  } catch (error) {
+    console.error("[Auth] Failed to store token:", error);
+  }
 }
 
-// Default users - admin and one driver
-const DEFAULT_USERS = [
-  { id: "1", username: "admin", password: "admin123", role: "admin" as UserRole },
-  { id: "2", username: "driver1", password: "driver123", role: "driver" as UserRole },
-];
+async function getStoredToken(): Promise<string | null> {
+  try {
+    if (Platform.OS === "web") {
+      return await AsyncStorage.getItem(TOKEN_KEY);
+    } else {
+      return await SecureStore.getItemAsync(TOKEN_KEY);
+    }
+  } catch (error) {
+    console.error("[Auth] Failed to get token:", error);
+    return null;
+  }
+}
 
-const ALL_USERS_KEY = "urea_all_users";
+async function clearToken(): Promise<void> {
+  try {
+    if (Platform.OS === "web") {
+      await AsyncStorage.removeItem(TOKEN_KEY);
+    } else {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+    }
+  } catch (error) {
+    console.error("[Auth] Failed to clear token:", error);
+  }
+}
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+// ============================================================
+// Export token getter for use in storage.ts API calls
+// ============================================================
+export async function getAuthToken(): Promise<string | null> {
+  return getStoredToken();
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
 
-  // Initialize users and check session on first load
+  // On mount: clear any old session (require fresh login every time)
   useEffect(() => {
     const init = async () => {
-      await initializeUsers();
-      await loadAllUsers();
-      await checkSession();
+      // Always clear session on startup - user must log in every time
+      await AsyncStorage.removeItem(SESSION_KEY);
+      await clearToken();
+      setIsLoading(false);
     };
     init();
   }, []);
 
-  const initializeUsers = async () => {
-    try {
-      const existingUsers = await AsyncStorage.getItem(ALL_USERS_KEY);
-      if (!existingUsers) {
-        // Store default users with passwords (for demo purposes)
-        await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(DEFAULT_USERS));
-      }
-    } catch (error) {
-      console.error("Error initializing users:", error);
-    }
-  };
-
-  const loadAllUsers = async () => {
-    try {
-      const allUsersData = await AsyncStorage.getItem(ALL_USERS_KEY);
-      if (allUsersData) {
-        const allUsers = JSON.parse(allUsersData);
-        setUsers(allUsers);
-      }
-    } catch (error) {
-      console.error("Error loading users:", error);
-    }
-  };
-
-  const checkSession = async () => {
-    try {
-      const sessionData = await AsyncStorage.getItem(SESSION_KEY);
-      if (sessionData) {
-        try {
-          const session = JSON.parse(sessionData);
-          setUser(session);
-        } catch (parseError) {
-          console.error("Error parsing session:", parseError);
-          await AsyncStorage.removeItem(SESSION_KEY);
-        }
-      }
-    } catch (error) {
-      console.error("Error checking session:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // ============================================================
+  // LOGIN - Calls VPS API endpoint
+  // ============================================================
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      // Find user with matching credentials
-      const foundUser = DEFAULT_USERS.find(
-        (u) => u.username === username && u.password === password
-      );
+      const apiBase = getApiBaseUrl();
+      const loginUrl = `${apiBase}/api/auth/driver-login`;
 
-      if (foundUser) {
-        const { password: _, ...userWithoutPassword } = foundUser;
-        const userObj = userWithoutPassword as User;
-        setUser(userObj);
-        try {
-          await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(userObj));
-          await logAuditAction(
-            userObj.id,
-            userObj.username,
-            userObj.role,
-            "LOGIN",
-            undefined,
-            undefined,
-            undefined,
-            {},
-            "success"
-          );
-        } catch (storageError) {
-          console.error("Error storing session:", storageError);
-        }
-        return true;
+      console.log("[Auth] Attempting login to:", loginUrl);
+
+      const response = await fetch(loginUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Erreur réseau" }));
+        console.error("[Auth] Login failed:", errorData);
+        // Try local fallback
+        return await loginLocal(username, password);
       }
-      await logAuditAction(
-        "unknown",
-        username,
-        "driver",
-        "LOGIN",
-        undefined,
-        undefined,
-        undefined,
-        {},
-        "failure",
-        "Invalid credentials"
-      );
-      return false;
+
+      const data = await response.json();
+
+      if (!data.success || !data.token) {
+        console.error("[Auth] Login response missing token:", data);
+        return false;
+      }
+
+      const userObj: User = {
+        id: String(data.user.id),
+        username: data.user.username,
+        role: data.user.role === "admin" ? "admin" : "driver",
+        token: data.token,
+      };
+
+      // Store session and token
+      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(userObj));
+      await storeToken(data.token);
+
+      setUser(userObj);
+      console.log("[Auth] Login successful:", userObj.username, userObj.role);
+      return true;
     } catch (error) {
-      console.error("Error during login:", error);
-      return false;
+      console.error("[Auth] Login error:", error);
+      // Fallback: try local credentials if API is unreachable
+      return await loginLocal(username, password);
     }
   };
 
+  // ============================================================
+  // LOCAL FALLBACK LOGIN (when VPS is unreachable)
+  // ============================================================
+  const loginLocal = async (username: string, password: string): Promise<boolean> => {
+    console.warn("[Auth] API unreachable, trying local fallback login");
+
+    const LOCAL_CREDENTIALS = [
+      { id: "1", username: "admin", password: "admin123", role: "admin" as UserRole },
+      { id: "2", username: "driver1", password: "driver123", role: "driver" as UserRole },
+    ];
+
+    const found = LOCAL_CREDENTIALS.find(
+      (u) => u.username === username && u.password === password
+    );
+
+    if (found) {
+      const { password: _, ...userObj } = found;
+      setUser(userObj);
+      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(userObj));
+      console.log("[Auth] Local fallback login successful");
+      return true;
+    }
+
+    return false;
+  };
+
+  // ============================================================
+  // LOGOUT
+  // ============================================================
   const logout = async () => {
     try {
-      if (user) {
-        await logAuditAction(
-          user.id,
-          user.username,
-          user.role,
-          "LOGOUT",
-          undefined,
-          undefined,
-          undefined,
-          {},
-          "success"
-        );
-      }
       setUser(null);
-      try {
-        await AsyncStorage.removeItem(SESSION_KEY);
-      } catch (storageError) {
-        console.error("Error removing session:", storageError);
-      }
+      await AsyncStorage.removeItem(SESSION_KEY);
+      await clearToken();
+      console.log("[Auth] Logged out successfully");
     } catch (error) {
-      console.error("Error during logout:", error);
+      console.error("[Auth] Logout error:", error);
     }
+  };
+
+  // ============================================================
+  // USER MANAGEMENT (admin only - calls VPS API)
+  // ============================================================
+
+  const refreshUsers = async () => {
+    // For now, return empty list - admin user management is done via VPS
+    setUsers([]);
   };
 
   const createUser = async (username: string, password: string, role: UserRole): Promise<boolean> => {
     try {
-      // Check if username already exists
-      if (users.some((u) => u.username === username)) {
-        console.error("Username already exists");
-        return false;
-      }
+      const token = await getStoredToken();
+      if (!token) return false;
 
-      const newUser: any = {
-        id: Date.now().toString(),
-        username,
-        password,
-        role,
-      };
+      const apiBase = getApiBaseUrl();
+      const response = await fetch(`${apiBase}/api/trpc/admin.createDriverAccount`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          json: {
+            username,
+            passwordHash: password,
+            role,
+          },
+        }),
+      });
 
-      const updatedUsers = [...users, newUser];
-      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(updatedUsers));
-      setUsers(updatedUsers);
-      return true;
+      return response.ok;
     } catch (error) {
-      console.error("Error creating user:", error);
+      console.error("[Auth] Create user error:", error);
       return false;
     }
   };
@@ -205,45 +231,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     role: UserRole
   ): Promise<boolean> => {
     try {
-      // Check if username already exists (excluding current user)
-      if (users.some((u) => u.id !== id && u.username === username)) {
-        console.error("Username already exists");
-        return false;
-      }
+      const token = await getStoredToken();
+      if (!token) return false;
 
-      const updatedUsers = users.map((u) =>
-        u.id === id ? { ...u, username, password, role } : u
-      );
+      const apiBase = getApiBaseUrl();
+      const response = await fetch(`${apiBase}/api/trpc/admin.updateDriverAccount`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          json: {
+            driverAccountId: parseInt(id),
+            username,
+            passwordHash: password,
+            role,
+          },
+        }),
+      });
 
-      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(updatedUsers));
-      setUsers(updatedUsers);
-      return true;
+      return response.ok;
     } catch (error) {
-      console.error("Error updating user:", error);
+      console.error("[Auth] Update user error:", error);
       return false;
     }
   };
 
   const deleteUser = async (id: string): Promise<boolean> => {
     try {
-      // Prevent deleting the admin user
-      if (id === "1") {
-        console.error("Cannot delete admin user");
-        return false;
-      }
+      const token = await getStoredToken();
+      if (!token) return false;
 
-      const updatedUsers = users.filter((u) => u.id !== id);
-      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(updatedUsers));
-      setUsers(updatedUsers);
-      return true;
+      const apiBase = getApiBaseUrl();
+      const response = await fetch(`${apiBase}/api/trpc/admin.deleteDriverAccount`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          json: {
+            driverAccountId: parseInt(id),
+          },
+        }),
+      });
+
+      return response.ok;
     } catch (error) {
-      console.error("Error deleting user:", error);
+      console.error("[Auth] Delete user error:", error);
       return false;
     }
-  };
-
-  const refreshUsers = async () => {
-    await loadAllUsers();
   };
 
   return (

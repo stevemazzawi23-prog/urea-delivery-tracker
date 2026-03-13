@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
+import { io } from "./_core/index";
+
+function broadcast(userId: number, event: string, data: unknown) {
+  if (io) {
+    io.to(`user:${userId}`).emit(event, data);
+    console.log(`[Socket.io] Broadcast "${event}" to room user:${userId}`);
+  }
+}
 
 export const invoicesRouter = router({
   // Get all invoices for current user
@@ -41,8 +49,8 @@ export const invoicesRouter = router({
       total: z.number(),
       status: z.enum(["draft", "sent", "paid"]).default("draft"),
     }))
-    .mutation(({ ctx, input }) => {
-      return db.createInvoice(ctx.user.id, {
+    .mutation(async ({ ctx, input }) => {
+      const id = await db.createInvoice(ctx.user.id, {
         deliveryId: input.deliveryId,
         clientId: input.clientId,
         clientName: input.clientName,
@@ -59,6 +67,8 @@ export const invoicesRouter = router({
         total: input.total,
         status: input.status,
       });
+      broadcast(ctx.user.id, "invoices:updated", { action: "create", id });
+      return id;
     }),
 
   // Update invoice status
@@ -67,14 +77,16 @@ export const invoicesRouter = router({
       invoiceId: z.number(),
       status: z.enum(["draft", "sent", "paid"]),
     }))
-    .mutation(({ input }) => {
-      return db.updateInvoiceStatus(input.invoiceId, input.status);
+    .mutation(async ({ ctx, input }) => {
+      await db.updateInvoiceStatus(input.invoiceId, input.status);
+      broadcast(ctx.user.id, "invoices:updated", { action: "update", id: input.invoiceId, status: input.status });
     }),
 
   // Delete invoice
   deleteInvoice: protectedProcedure
     .input(z.object({ invoiceId: z.number() }))
-    .mutation(({ input }) => {
-      return db.deleteInvoice(input.invoiceId);
+    .mutation(async ({ ctx, input }) => {
+      await db.deleteInvoice(input.invoiceId);
+      broadcast(ctx.user.id, "invoices:updated", { action: "delete", id: input.invoiceId });
     }),
 });
