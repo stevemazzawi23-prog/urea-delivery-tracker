@@ -3,17 +3,20 @@ import { router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
 import { io } from "./_core/index";
 
-function broadcast(userId: number, event: string, data: unknown) {
+// Shared company userId: all drivers and admin share the same data pool
+const SHARED_COMPANY_USER_ID = 1;
+
+function broadcast(event: string, data: unknown) {
   if (io) {
-    io.to(`user:${userId}`).emit(event, data);
-    console.log(`[Socket.io] Broadcast "${event}" to room user:${userId}`);
+    io.to(`user:${SHARED_COMPANY_USER_ID}`).emit(event, data);
+    console.log(`[Socket.io] Broadcast "${event}" to shared company room`);
   }
 }
 
 export const invoicesRouter = router({
-  // Get all invoices for current user
-  listInvoices: protectedProcedure.query(({ ctx }) => {
-    return db.getInvoicesByUser(ctx.user.id);
+  // Get all invoices (shared across all company users)
+  listInvoices: protectedProcedure.query(() => {
+    return db.getInvoicesByUser(SHARED_COMPANY_USER_ID);
   }),
 
   // Get invoices for a specific delivery
@@ -49,8 +52,8 @@ export const invoicesRouter = router({
       total: z.number(),
       status: z.enum(["draft", "sent", "paid"]).default("draft"),
     }))
-    .mutation(async ({ ctx, input }) => {
-      const id = await db.createInvoice(ctx.user.id, {
+    .mutation(async ({ input }) => {
+      const id = await db.createInvoice(SHARED_COMPANY_USER_ID, {
         deliveryId: input.deliveryId,
         clientId: input.clientId,
         clientName: input.clientName,
@@ -67,7 +70,7 @@ export const invoicesRouter = router({
         total: input.total,
         status: input.status,
       });
-      broadcast(ctx.user.id, "invoices:updated", { action: "create", id });
+      broadcast("invoices:updated", { action: "create", id });
       return id;
     }),
 
@@ -77,16 +80,16 @@ export const invoicesRouter = router({
       invoiceId: z.number(),
       status: z.enum(["draft", "sent", "paid"]),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       await db.updateInvoiceStatus(input.invoiceId, input.status);
-      broadcast(ctx.user.id, "invoices:updated", { action: "update", id: input.invoiceId, status: input.status });
+      broadcast("invoices:updated", { action: "update", id: input.invoiceId, status: input.status });
     }),
 
   // Delete invoice
   deleteInvoice: protectedProcedure
     .input(z.object({ invoiceId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       await db.deleteInvoice(input.invoiceId);
-      broadcast(ctx.user.id, "invoices:updated", { action: "delete", id: input.invoiceId });
+      broadcast("invoices:updated", { action: "delete", id: input.invoiceId });
     }),
 });

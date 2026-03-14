@@ -3,18 +3,22 @@ import { router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
 import { io } from "./_core/index";
 
-// Helper: broadcast a real-time event to all devices of the same user
-function broadcast(userId: number, event: string, data: unknown) {
+// Shared company userId: all drivers and admin share the same data pool
+// This is the userId of the main admin account (id=1 in users table)
+const SHARED_COMPANY_USER_ID = 1;
+
+// Helper: broadcast a real-time event to ALL connected devices (shared company room)
+function broadcast(event: string, data: unknown) {
   if (io) {
-    io.to(`user:${userId}`).emit(event, data);
-    console.log(`[Socket.io] Broadcast "${event}" to room user:${userId}`);
+    io.to(`user:${SHARED_COMPANY_USER_ID}`).emit(event, data);
+    console.log(`[Socket.io] Broadcast "${event}" to shared company room`);
   }
 }
 
 export const deliveryRouter = router({
-  // Get all clients for current user
-  listClients: protectedProcedure.query(({ ctx }) => {
-    return db.getClientsByUser(ctx.user.id);
+  // Get all clients (shared across all company users)
+  listClients: protectedProcedure.query(() => {
+    return db.getClientsByUser(SHARED_COMPANY_USER_ID);
   }),
 
   // Get client by ID
@@ -34,8 +38,8 @@ export const deliveryRouter = router({
       email: z.string().email().optional(),
       notes: z.string().optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
-      const id = await db.createClient(ctx.user.id, {
+    .mutation(async ({ input }) => {
+      const id = await db.createClient(SHARED_COMPANY_USER_ID, {
         name: input.name,
         company: input.company || null,
         phone: input.phone || null,
@@ -43,7 +47,7 @@ export const deliveryRouter = router({
         email: input.email || null,
         notes: input.notes || null,
       });
-      broadcast(ctx.user.id, "clients:updated", { action: "create", id });
+      broadcast("clients:updated", { action: "create", id });
       return id;
     }),
 
@@ -58,7 +62,7 @@ export const deliveryRouter = router({
       email: z.string().email().optional(),
       notes: z.string().optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       await db.updateClient(input.clientId, {
         name: input.name,
         company: input.company || null,
@@ -67,15 +71,15 @@ export const deliveryRouter = router({
         email: input.email || null,
         notes: input.notes || null,
       });
-      broadcast(ctx.user.id, "clients:updated", { action: "update", id: input.clientId });
+      broadcast("clients:updated", { action: "update", id: input.clientId });
     }),
 
   // Delete client
   deleteClient: protectedProcedure
     .input(z.object({ clientId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       await db.deleteClient(input.clientId);
-      broadcast(ctx.user.id, "clients:updated", { action: "delete", id: input.clientId });
+      broadcast("clients:updated", { action: "delete", id: input.clientId });
     }),
 
   // Get sites for client
@@ -92,9 +96,9 @@ export const deliveryRouter = router({
       name: z.string().min(1),
       address: z.string().optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const id = await db.createSite(input.clientId, input.name, input.address || null);
-      broadcast(ctx.user.id, "sites:updated", { action: "create", id, clientId: input.clientId });
+      broadcast("sites:updated", { action: "create", id, clientId: input.clientId });
       return id;
     }),
 
@@ -105,22 +109,22 @@ export const deliveryRouter = router({
       name: z.string().min(1).optional(),
       address: z.string().optional(),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       await db.updateSite(input.siteId, input.name, input.address || null);
-      broadcast(ctx.user.id, "sites:updated", { action: "update", id: input.siteId });
+      broadcast("sites:updated", { action: "update", id: input.siteId });
     }),
 
   // Delete site
   deleteSite: protectedProcedure
     .input(z.object({ siteId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       await db.deleteSite(input.siteId);
-      broadcast(ctx.user.id, "sites:updated", { action: "delete", id: input.siteId });
+      broadcast("sites:updated", { action: "delete", id: input.siteId });
     }),
 
-  // Get all deliveries for current user
-  listDeliveries: protectedProcedure.query(({ ctx }) => {
-    return db.getDeliveriesByUser(ctx.user.id);
+  // Get all deliveries (shared across all company users)
+  listDeliveries: protectedProcedure.query(() => {
+    return db.getDeliveriesByUser(SHARED_COMPANY_USER_ID);
   }),
 
   // Get delivery by ID with client info
@@ -141,8 +145,8 @@ export const deliveryRouter = router({
       driverName: z.string().optional(),
       startTime: z.date(),
     }))
-    .mutation(async ({ ctx, input }) => {
-      const id = await db.createDelivery(ctx.user.id, {
+    .mutation(async ({ input }) => {
+      const id = await db.createDelivery(SHARED_COMPANY_USER_ID, {
         clientId: input.clientId,
         clientName: input.clientName,
         clientCompany: input.clientCompany || null,
@@ -151,7 +155,7 @@ export const deliveryRouter = router({
         driverName: input.driverName || null,
         startTime: input.startTime,
       });
-      broadcast(ctx.user.id, "deliveries:updated", {
+      broadcast("deliveries:updated", {
         action: "create",
         id,
         clientName: input.clientName,
@@ -177,7 +181,7 @@ export const deliveryRouter = router({
         driverName: input.driverName,
         photos: input.photos,
       });
-      broadcast(ctx.user.id, "deliveries:updated", {
+      broadcast("deliveries:updated", {
         action: "update",
         id: input.deliveryId,
         litersDelivered: input.litersDelivered,
@@ -188,9 +192,9 @@ export const deliveryRouter = router({
   // Delete delivery
   deleteDelivery: protectedProcedure
     .input(z.object({ deliveryId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       await db.deleteDelivery(input.deliveryId);
-      broadcast(ctx.user.id, "deliveries:updated", { action: "delete", id: input.deliveryId });
+      broadcast("deliveries:updated", { action: "delete", id: input.deliveryId });
     }),
 
   // Send POD email

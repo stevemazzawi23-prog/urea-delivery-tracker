@@ -68,8 +68,9 @@ export function useSocket(userId: string | null | undefined, options: UseSocketO
 
         socket.on("connect", () => {
           console.log("[Socket.io] Connected to VPS");
-          // Join the user-specific room so we only receive our own data updates
-          socket!.emit("join", userId);
+          // All devices join the shared company room (user:1) to share data
+          // This ensures admin and all drivers see the same real-time updates
+          socket!.emit("join", "1");
         });
 
         socket.on("deliveries:updated", (data: unknown) => {
