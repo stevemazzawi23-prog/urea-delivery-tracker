@@ -13,7 +13,7 @@ const env = {
   appId: process.env.EXPO_PUBLIC_APP_ID ?? "",
   ownerId: process.env.EXPO_PUBLIC_OWNER_OPEN_ID ?? "",
   ownerName: process.env.EXPO_PUBLIC_OWNER_NAME ?? "",
-  apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? "",
+  apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://203.161.38.228:3000",
   deepLinkScheme: schemeFromBundleId,
 };
 
@@ -51,8 +51,8 @@ export function getApiBaseUrl(): string {
     }
   }
 
-  // 3. Fallback to empty (relative URL, local dev)
-  return "";
+  // 3. Fallback hardcoded to VPS URL (ensures production APK always connects to VPS)
+  return "http://203.161.38.228:3000";
 }
 
 export const SESSION_TOKEN_KEY = "app_session_token";
