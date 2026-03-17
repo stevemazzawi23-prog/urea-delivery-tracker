@@ -14,18 +14,20 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { DeliveryUnit, Equipment } from "@/lib/storage";
-import { trpc } from "@/lib/trpc";
+import { DeliveryUnit, Equipment, getEquipment } from "@/lib/storage";
 
 export default function ActiveDeliveryScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { clientId, clientName, clientCompany, siteId, siteName } = useLocalSearchParams<{
+    clientId: string;
+    clientName: string;
+    clientCompany: string;
+    siteId: string;
+    siteName: string;
+  }>();
 
-  const { clientId, clientName, clientCompany, siteId, siteName } = useLocalSearchParams<{ clientId: string; clientName: string; clientCompany: string; siteId: string; siteName: string }>();
-  const parsedClientId = Number(clientId);
-  const eqQuery = (trpc as any).equipment.listByClient.useQuery({ clientId: isNaN(parsedClientId) ? 0 : parsedClientId });
-
-const [startTime] = useState(Date.now());
+  const [startTime] = useState(Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [units, setUnits] = useState<DeliveryUnit[]>([]);
   const [unitName, setUnitName] = useState("");
@@ -38,22 +40,11 @@ const [startTime] = useState(Date.now());
   // Load equipment list on mount
   useEffect(() => {
     const loadEquipment = async () => {
-
+      const equipmentList = await getEquipment();
+      setEquipment(equipmentList);
     };
     loadEquipment();
-  }, [])
-
-  // Sync equipment list from API (filtered by client)
-  useEffect(() => {
-    const list = (eqQuery.data ?? []).map((it: any) => ({
-      id: String((it as any).id ?? (it as any).name),
-      name: (it as any).name,
-      capacity: undefined as number | undefined
-    }));
-    setEquipment(list);
-  }, [eqQuery.data]);
-
-;
+  }, []);
 
   useEffect(() => {
     // Start timer

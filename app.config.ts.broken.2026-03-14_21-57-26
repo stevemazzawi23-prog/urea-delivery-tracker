@@ -1,0 +1,18 @@
+
+export default {
+
+  expo:
+  android:
+    package: 'com.splogistix.app' {
+
+    extra: {
+      eas: { projectId: "5c76fc31-a82e-40e7-8502-b03589b78834" },
+
+      EXPO_PUBLIC_API_BASE_URL: "https://api.sp-logistix.com"
+
+    }
+
+  }
+
+};
+

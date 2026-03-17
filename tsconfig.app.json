@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowJs": false,
+    "checkJs": false
+  },
+  "exclude": [
+    "server",
+    "server/**/*",
+    "dist",
+    "node_modules",
+    "babel.config.js",
+    "metro.config.js",
+    "tailwind.config.js",
+    "postcss.config.js"
+  ]
+}

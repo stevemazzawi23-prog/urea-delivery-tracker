@@ -1,3 +1,5 @@
+import { trpc } from "../lib/trpc";
+import { TRPCProvider } from "../lib/trpcProvider";
 import "@/global.css";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -98,7 +100,7 @@ export default function RootLayout() {
 
   if (shouldOverrideSafeArea) {
     return (
-      <ThemeProvider>
+      <ThemeProvider><TRPCProvider>
         <SafeAreaProvider initialMetrics={providerInitialMetrics}>
           <SafeAreaFrameContext.Provider value={frame}>
             <SafeAreaInsetsContext.Provider value={insets}>
@@ -106,15 +108,15 @@ export default function RootLayout() {
             </SafeAreaInsetsContext.Provider>
           </SafeAreaFrameContext.Provider>
         </SafeAreaProvider>
-      </ThemeProvider>
+      </TRPCProvider></ThemeProvider>
     );
   }
 
   return (
-    <ThemeProvider>
+    <ThemeProvider><TRPCProvider>
       <SafeAreaProvider initialMetrics={providerInitialMetrics}>
         {content}
       </SafeAreaProvider>
-    </ThemeProvider>
+    </TRPCProvider></ThemeProvider>
   );
 }

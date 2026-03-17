@@ -5,6 +5,7 @@ import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth, type UserRole } from "@/lib/auth-context";
+import { trpc } from "@/lib/trpc";
 import { Platform } from "react-native";
 
 type ModalMode = "create" | "edit" | null;
@@ -13,6 +14,8 @@ export default function DriversScreen() {
   const colors = useColors();
   const { user, users, createUser, updateUser, deleteUser, refreshUsers } = useAuth();
   const router = useRouter();
+  const drvQuery = (trpc as any).admin.listDriverAccounts.useQuery(undefined);
+
 
   // Redirect non-admin users
   useEffect(() => {
@@ -34,11 +37,12 @@ export default function DriversScreen() {
   useFocusEffect(
     useCallback(() => {
       refreshUsers();
+      drvQuery.refetch();
     }, [])
   );
 
   // Filter to show only drivers (admins can manage all drivers)
-  const drivers = users.filter((u) => u.role === "driver");
+  const drivers = (drvQuery.data ?? users).filter((u: any) => u.role === "driver");
 
   const handleOpenCreateModal = () => {
     setFormData({ username: "", password: "", role: "driver" as UserRole });
@@ -100,6 +104,7 @@ export default function DriversScreen() {
         }
         handleCloseModal();
         await refreshUsers();
+        await drvQuery.refetch();
       }
     } catch (error) {
       console.error("Error saving driver:", error);
@@ -130,6 +135,7 @@ export default function DriversScreen() {
                 }
                 Alert.alert("Succès", "Chauffeur supprimé avec succès");
                 await refreshUsers();
+        await drvQuery.refetch();
               } else {
                 Alert.alert("Erreur", "Impossible de supprimer le chauffeur");
               }
@@ -177,7 +183,7 @@ export default function DriversScreen() {
           </View>
         ) : (
           <View style={{ gap: 12 }}>
-            {drivers.map((driver) => (
+            {drivers.map((driver: any) => (
               <View
                 key={driver.id}
                 style={{
@@ -199,7 +205,7 @@ export default function DriversScreen() {
                   </View>
                   <View style={{ flexDirection: "row", gap: 8 }}>
                     <TouchableOpacity
-                      onPress={() => handleOpenEditModal(driver.id)}
+                      onPress={() => handleOpenEditModal(String(driver.id))}
                       style={{
                         backgroundColor: colors.primary,
                         paddingHorizontal: 12,
@@ -211,7 +217,7 @@ export default function DriversScreen() {
                       <Text style={{ color: "white", fontSize: 12, fontWeight: "600" }}>Modifier</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      onPress={() => handleDelete(driver.id, driver.username)}
+                      onPress={() => handleDelete(String(driver.id), driver.username)}
                       style={{
                         backgroundColor: colors.error,
                         paddingHorizontal: 12,
