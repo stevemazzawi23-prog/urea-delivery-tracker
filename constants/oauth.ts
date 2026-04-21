@@ -45,8 +45,8 @@ export function getApiBaseUrl(): string {
     }
   }
 
-  // Fallback to empty (will use relative URL)
-  return "";
+  // Fallback to VPS server
+  return "https://server1.sp-logistix.com";
 }
 
 export const SESSION_TOKEN_KEY = "app_session_token";
