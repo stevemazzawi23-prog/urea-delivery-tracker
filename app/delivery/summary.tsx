@@ -6,6 +6,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { saveDelivery, DeliveryUnit } from "@/lib/storage";
 import { removeAccents } from "@/lib/accent-remover";
+import { syncTicketToPortalAsync } from "@/lib/syncToPortal";
 
 export default function DeliverySummaryScreen() {
   const colors = useColors();
@@ -54,6 +55,22 @@ export default function DeliverySummaryScreen() {
         photos,
       });
       setDeliveryId(delivery.id);
+
+      // Synchroniser le billet vers le portail SP Logistix
+      // Générer un numéro de billet unique
+      const ticketNumber = `APK-${delivery.id.substring(0, 8).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+      const clientCode = clientId || clientName.substring(0, 3).toUpperCase();
+      const deliveryDate = new Date(startTimestamp).toISOString().split('T')[0];
+      
+      syncTicketToPortalAsync({
+        clientCode,
+        ticketNumber,
+        deliveryDate,
+        volumeTotal: liters,
+        pieces: units.length,
+        locationCode: siteName,
+        duration: formatDuration(durationSeconds),
+      });
     } catch (error) {
       console.error("Error saving delivery:", error);
     }
