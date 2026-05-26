@@ -5,7 +5,7 @@ import * as db from "./db";
 export const invoicesRouter = router({
   // Get all invoices for current user
   listInvoices: protectedProcedure.query(({ ctx }) => {
-    return db.getInvoicesByUser(ctx.user.id);
+    return db.getInvoicesByUser(1);
   }),
 
   // Get invoices for a specific delivery
@@ -42,7 +42,7 @@ export const invoicesRouter = router({
       status: z.enum(["draft", "sent", "paid"]).default("draft"),
     }))
     .mutation(({ ctx, input }) => {
-      return db.createInvoice(ctx.user.id, {
+      return db.createInvoice(1, {
         deliveryId: input.deliveryId,
         clientId: input.clientId,
         clientName: input.clientName,

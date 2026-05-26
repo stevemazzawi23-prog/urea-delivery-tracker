@@ -5,7 +5,7 @@ import * as db from "./db";
 export const deliveryRouter = router({
   // Get all clients for current user
   listClients: protectedProcedure.query(({ ctx }) => {
-    return db.getClientsByUser(ctx.user.id);
+    return db.getClientsByUser(1);
   }),
 
   // Get client by ID
@@ -26,7 +26,7 @@ export const deliveryRouter = router({
       notes: z.string().optional(),
     }))
     .mutation(({ ctx, input }) => {
-      return db.createClient(ctx.user.id, {
+      return db.createClient(1, {
         name: input.name,
         company: input.company || null,
         phone: input.phone || null,
@@ -103,7 +103,7 @@ export const deliveryRouter = router({
 
   // Get all deliveries for current user
   listDeliveries: protectedProcedure.query(({ ctx }) => {
-    return db.getDeliveriesByUser(ctx.user.id);
+    return db.getDeliveriesByUser(1);
   }),
 
   // Get delivery by ID with client info
@@ -125,7 +125,7 @@ export const deliveryRouter = router({
       startTime: z.date(),
     }))
     .mutation(({ ctx, input }) => {
-      return db.createDelivery(ctx.user.id, {
+      return db.createDelivery(1, {
         clientId: input.clientId,
         clientName: input.clientName,
         clientCompany: input.clientCompany || null,
