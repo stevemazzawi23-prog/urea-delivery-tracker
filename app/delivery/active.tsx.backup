@@ -9,25 +9,22 @@ import {
   ScrollView,
   FlatList,
   Modal,
-  ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { DeliveryUnit, Equipment, getEquipment } from "@/lib/storage";
-import { getPortalClientUnits, PortalClientUnit } from "@/lib/portal-units";
 
 export default function ActiveDeliveryScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { clientId, clientName, clientCompany, siteId, siteName, clientPortalCode } = useLocalSearchParams<{
+  const { clientId, clientName, clientCompany, siteId, siteName } = useLocalSearchParams<{
     clientId: string;
     clientName: string;
     clientCompany: string;
     siteId: string;
     siteName: string;
-    clientPortalCode?: string;
   }>();
 
   const [startTime] = useState(Date.now());
@@ -40,29 +37,14 @@ export default function ActiveDeliveryScreen() {
   const [showEquipmentDropdown, setShowEquipmentDropdown] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Unités du portail pour ce client
-  const [portalUnits, setPortalUnits] = useState<PortalClientUnit[]>([]);
-  const [loadingPortalUnits, setLoadingPortalUnits] = useState(false);
-  const [portalUnitsFromCache, setPortalUnitsFromCache] = useState(false);
-
-  // Load equipment list and portal units on mount
+  // Load equipment list on mount
   useEffect(() => {
-    const loadData = async () => {
-      // Charger les équipements locaux
+    const loadEquipment = async () => {
       const equipmentList = await getEquipment();
       setEquipment(equipmentList);
-
-      // Charger les unités du portail si le client a un code portail
-      if (clientPortalCode) {
-        setLoadingPortalUnits(true);
-        const result = await getPortalClientUnits(clientPortalCode);
-        setPortalUnits(result.units || []);
-        setPortalUnitsFromCache(!!result.fromCache);
-        setLoadingPortalUnits(false);
-      }
     };
-    loadData();
-  }, [clientPortalCode]);
+    loadEquipment();
+  }, []);
 
   useEffect(() => {
     // Start timer
@@ -116,6 +98,7 @@ export default function ActiveDeliveryScreen() {
           {
             text: "Vérifier mon entrée",
             onPress: () => {
+              // Focus on the liters input for correction
               setUnitLiters("");
             },
             style: "default"
@@ -140,10 +123,12 @@ export default function ActiveDeliveryScreen() {
   };
 
   const proceedWithAddUnit = () => {
+
     // Check for duplicate unit name
     const existingUnit = units.find(u => u.unitName.toLowerCase() === unitName.trim().toLowerCase());
     
     if (existingUnit) {
+      // Show dialog asking to merge or add new
       Alert.alert(
         "Unité déjà existante",
         `L'unité "${unitName}" existe déjà avec ${existingUnit.liters}L. Que voulez-vous faire?`,
@@ -167,6 +152,7 @@ export default function ActiveDeliveryScreen() {
           {
             text: "Entrer un nouveau numéro d'unité",
             onPress: () => {
+              // Clear the unit name to allow user to enter a different one
               setUnitName("");
             }
           },
@@ -214,6 +200,7 @@ export default function ActiveDeliveryScreen() {
     const endTime = Date.now();
     const totalLiters = units.reduce((sum, unit) => sum + unit.liters, 0);
 
+    // Get current driver name
     const { getCurrentDriver } = await import("@/lib/storage");
     const currentDriver = await getCurrentDriver();
     const driverName = currentDriver?.name || "Non spécifié";
@@ -253,22 +240,6 @@ export default function ActiveDeliveryScreen() {
 
   const totalLiters = units.reduce((sum, unit) => sum + unit.liters, 0);
 
-  // Combiner les unités du portail et les équipements locaux pour le dropdown
-  const dropdownItems: { id: string; name: string; subtitle?: string; isPortal: boolean }[] = [
-    ...portalUnits.map(u => ({
-      id: `portal-${u.id}`,
-      name: u.unitName,
-      subtitle: u.description || "Unité configurée sur le portail",
-      isPortal: true,
-    })),
-    ...equipment.map(e => ({
-      id: `equip-${e.id}`,
-      name: e.name,
-      subtitle: e.capacity ? `Capacité: ${e.capacity}L` : undefined,
-      isPortal: false,
-    })),
-  ];
-
   return (
     <ScreenContainer>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
@@ -296,26 +267,6 @@ export default function ActiveDeliveryScreen() {
               {siteName && siteName.trim() !== "" ? siteName : "Sans site"}
             </Text>
           </View>
-          {/* Indicateur unités portail */}
-          {clientPortalCode && (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              {loadingPortalUnits ? (
-                <>
-                  <ActivityIndicator size="small" color="#1a5f3f" />
-                  <Text style={{ fontSize: 12, color: colors.muted }}>Chargement des unités du portail...</Text>
-                </>
-              ) : portalUnits.length > 0 ? (
-                <Text style={{ fontSize: 12, color: "#1a5f3f", fontWeight: "600" }}>
-                  ✓ {portalUnits.length} unité{portalUnits.length > 1 ? "s" : ""} disponible{portalUnits.length > 1 ? "s" : ""} pour ce client
-                  {portalUnitsFromCache ? " (cache)" : ""}
-                </Text>
-              ) : (
-                <Text style={{ fontSize: 12, color: colors.muted }}>
-                  Aucune unité configurée sur le portail pour ce client
-                </Text>
-              )}
-            </View>
-          )}
         </View>
 
         {/* Add Unit Section */}
@@ -324,24 +275,24 @@ export default function ActiveDeliveryScreen() {
             Ajouter une unité
           </Text>
 
-          {/* Dropdown Button - maintenant affiche les unités du portail EN PREMIER */}
+          {/* Equipment Dropdown Button */}
           <TouchableOpacity
             onPress={() => setShowEquipmentDropdown(true)}
             style={{
               padding: 12,
               borderWidth: 1,
-              borderColor: unitName ? "#1a5f3f" : colors.border,
+              borderColor: colors.border,
               borderRadius: 10,
               backgroundColor: colors.surface,
               justifyContent: "center",
             }}
           >
             <Text style={{ color: unitName ? colors.foreground : colors.muted }}>
-              {unitName || "Sélectionner une unité..."}
+              {unitName || "Sélectionner un équipement..."}
             </Text>
           </TouchableOpacity>
 
-          {/* Dropdown Modal */}
+          {/* Equipment Dropdown Modal */}
           <Modal
             visible={showEquipmentDropdown}
             transparent
@@ -359,17 +310,10 @@ export default function ActiveDeliveryScreen() {
                 }}
               >
                 <View style={{ paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                  <Text style={{ fontSize: 18, fontWeight: "bold", color: colors.foreground }}>
-                    Sélectionner une unité
-                  </Text>
-                  {portalUnits.length > 0 && (
-                    <Text style={{ fontSize: 12, color: "#1a5f3f", marginTop: 4 }}>
-                      {portalUnits.length} unité{portalUnits.length > 1 ? "s" : ""} configurée{portalUnits.length > 1 ? "s" : ""} pour {clientName}
-                    </Text>
-                  )}
+                  <Text style={{ fontSize: 18, fontWeight: "bold", color: colors.foreground }}>Sélectionner un équipement</Text>
                 </View>
                 <FlatList
-                  data={dropdownItems}
+                  data={equipment}
                   keyExtractor={(item) => item.id}
                   renderItem={({ item }) => (
                     <TouchableOpacity
@@ -381,37 +325,17 @@ export default function ActiveDeliveryScreen() {
                         padding: 16,
                         borderBottomWidth: 1,
                         borderBottomColor: colors.border,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 10,
                       }}
                     >
-                      {item.isPortal && (
-                        <View style={{
-                          backgroundColor: "#1a5f3f20",
-                          borderRadius: 4,
-                          paddingHorizontal: 6,
-                          paddingVertical: 2,
-                        }}>
-                          <Text style={{ fontSize: 10, color: "#1a5f3f", fontWeight: "600" }}>PORTAIL</Text>
-                        </View>
+                      <Text style={{ fontSize: 16, color: colors.foreground }}>{item.name}</Text>
+                      {item.capacity && (
+                        <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>Capacité: {item.capacity}L</Text>
                       )}
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 16, color: colors.foreground, fontWeight: item.isPortal ? "600" : "400" }}>
-                          {item.name}
-                        </Text>
-                        {item.subtitle && (
-                          <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>{item.subtitle}</Text>
-                        )}
-                      </View>
                     </TouchableOpacity>
                   )}
                   ListEmptyComponent={
                     <View style={{ padding: 16, alignItems: "center" }}>
-                      <Text style={{ color: colors.muted }}>Aucune unité disponible</Text>
-                      <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
-                        Ajoutez des unités depuis le portail SP Logistix
-                      </Text>
+                      <Text style={{ color: colors.muted }}>Aucun équipement disponible</Text>
                     </View>
                   }
                 />

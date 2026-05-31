@@ -59,6 +59,7 @@ export interface Client {
   address: string;
   email?: string;
   notes: string;
+  portalCode?: string;
   equipmentIds?: string[]; // Equipment IDs assigned to this client
   createdAt: number;
 }
