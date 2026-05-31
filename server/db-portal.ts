@@ -21,7 +21,18 @@ async function getConn(): Promise<mysql.Connection> {
   }
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL not set");
-  _conn = await mysql.createConnection(url);
+  // Parse the URL to extract host/user/password/database and pass SSL as object
+  // TiDB Cloud requires SSL but mysql2 needs ssl as an object, not a boolean
+  const parsed = new URL(url);
+  const isSSL = parsed.searchParams.get('ssl') || parsed.host.includes('tidbcloud');
+  _conn = await mysql.createConnection({
+    host: parsed.hostname,
+    port: parseInt(parsed.port || '3306'),
+    user: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+    database: parsed.pathname.replace('/', ''),
+    ssl: isSSL ? { rejectUnauthorized: false } : undefined,
+  });
   return _conn;
 }
 
@@ -29,9 +40,10 @@ async function getConn(): Promise<mysql.Connection> {
 
 export async function getUserByUsername(username: string) {
   const conn = await getConn();
+  // Search by email OR name to support both login methods
   const [rows] = await conn.query(
-    "SELECT * FROM users WHERE name = ? LIMIT 1",
-    [username]
+    "SELECT * FROM users WHERE email = ? OR name = ? LIMIT 1",
+    [username, username]
   ) as [any[], any];
   return rows[0] || null;
 }
