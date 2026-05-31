@@ -2,6 +2,7 @@ import { ONE_YEAR_MS, COOKIE_NAME } from "../../shared/const.js";
 import type { Express, Request, Response } from "express";
 import { getUserByOpenId, upsertUser, getDriverAccountByUsername } from "../db";
 import { getUserByUsername as getPortalUserByUsername } from "../db-portal";
+import bcrypt from "bcryptjs";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
@@ -187,8 +188,8 @@ export function registerOAuthRoutes(app: Express) {
       const portalUser = await getPortalUserByUsername(username);
 
       if (portalUser && portalUser.passwordHash) {
-        // Verify password (plain text comparison for now)
-        const passwordValid = portalUser.passwordHash === password;
+        // Verify password using bcrypt (portal stores hashed passwords)
+        const passwordValid = await bcrypt.compare(password, portalUser.passwordHash);
         if (!passwordValid) {
           res.status(401).json({ error: "Identifiants incorrects" });
           return;
