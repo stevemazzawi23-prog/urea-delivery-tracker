@@ -4,12 +4,26 @@ import { InsertUser, users, clients, sites, deliveries, Client, InsertClient, Si
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+import mysql from "mysql2/promise";
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const url = process.env.DATABASE_URL;
+      const parsed = new URL(url);
+      const isTiDB = parsed.host.includes('tidbcloud') || parsed.searchParams.get('ssl');
+      const pool = mysql.createPool({
+        host: parsed.hostname,
+        port: parseInt(parsed.port || '3306'),
+        user: decodeURIComponent(parsed.username),
+        password: decodeURIComponent(parsed.password),
+        database: parsed.pathname.replace('/', ''),
+        ssl: isTiDB ? { rejectUnauthorized: false } : undefined,
+        waitForConnections: true,
+        connectionLimit: 10,
+      });
+      _db = drizzle(pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;

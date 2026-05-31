@@ -1,6 +1,8 @@
 import { ONE_YEAR_MS, COOKIE_NAME } from "../../shared/const.js";
 import type { Express, Request, Response } from "express";
 import { getUserByOpenId, upsertUser, getDriverAccountByUsername } from "../db";
+import { getUserByUsername as getPortalUserByUsername } from "../db-portal";
+import bcrypt from "bcryptjs";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
@@ -83,8 +85,6 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      // Redirect to the frontend URL (Expo web on port 8081)
-      // Cookie is set with parent domain so it works across both 3000 and 8081 subdomains
       const frontendUrl =
         process.env.EXPO_WEB_PREVIEW_URL ||
         process.env.EXPO_PACKAGER_PROXY_URL ||
@@ -134,7 +134,6 @@ export function registerOAuthRoutes(app: Express) {
     res.json({ success: true });
   });
 
-  // Get current authenticated user - works with both cookie (web) and Bearer token (mobile)
   app.get("/api/auth/me", async (req: Request, res: Response) => {
     try {
       const user = await sdk.authenticateRequest(req);
@@ -145,15 +144,10 @@ export function registerOAuthRoutes(app: Express) {
     }
   });
 
-  // Establish session cookie from Bearer token
-  // Used by iframe preview: frontend receives token via postMessage, then calls this endpoint
-  // to get a proper Set-Cookie response from the backend (3000-xxx domain)
   app.post("/api/auth/session", async (req: Request, res: Response) => {
     try {
-      // Authenticate using Bearer token from Authorization header
       const user = await sdk.authenticateRequest(req);
 
-      // Get the token from the Authorization header to set as cookie
       const authHeader = req.headers.authorization || req.headers.Authorization;
       if (typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
         res.status(400).json({ error: "Bearer token required" });
@@ -161,7 +155,6 @@ export function registerOAuthRoutes(app: Express) {
       }
       const token = authHeader.slice("Bearer ".length).trim();
 
-      // Set cookie for this domain (3000-xxx)
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
@@ -175,9 +168,9 @@ export function registerOAuthRoutes(app: Express) {
   // ============================================================
   // DRIVER LOGIN - Custom authentication for SP Logistix drivers
   // ============================================================
-  // This endpoint allows drivers to login with username/password
-  // stored in the driverAccounts table (managed by admin).
-  // Returns a JWT token compatible with the existing auth system.
+  // Supports login via:
+  // 1. Portal users table (users with passwordHash set)
+  // 2. driverAccounts table (legacy)
   app.post("/api/auth/driver-login", async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
@@ -187,52 +180,70 @@ export function registerOAuthRoutes(app: Express) {
         return;
       }
 
-      // Look up driver account
-      const driverAccount = await getDriverAccountByUsername(username);
+      let openId: string;
+      let userName: string;
+      let userRole: string = "user";
 
-      if (!driverAccount) {
-        res.status(401).json({ error: "Identifiants incorrects" });
-        return;
-      }
+      // Try portal users table first (login by name field)
+      const portalUser = await getPortalUserByUsername(username);
 
-      if (!driverAccount.isActive) {
-        res.status(401).json({ error: "Compte désactivé" });
-        return;
-      }
+      if (portalUser && portalUser.passwordHash) {
+        // Verify password using bcrypt (portal stores hashed passwords)
+        const passwordValid = await bcrypt.compare(password, portalUser.passwordHash);
+        if (!passwordValid) {
+          res.status(401).json({ error: "Identifiants incorrects" });
+          return;
+        }
+        openId = portalUser.openId || `portal:${portalUser.id}`;
+        userName = portalUser.name || username;
+        userRole = portalUser.role || "user";
 
-      // Verify password (stored as plain text or bcrypt hash)
-      // Support both plain text (legacy) and bcrypt hash
-      let passwordValid = false;
-      const storedHash = driverAccount.passwordHash;
-
-      if (storedHash.startsWith("$2b$") || storedHash.startsWith("$2a$")) {
-        // bcrypt hash - would need bcrypt library, use plain text for now
-        passwordValid = storedHash === password;
+        // Ensure user exists in local users table for session management
+        await upsertUser({
+          openId,
+          name: userName,
+          email: portalUser.email || null,
+          loginMethod: "driver",
+          lastSignedIn: new Date(),
+          role: userRole,
+        });
       } else {
-        // Plain text comparison
-        passwordValid = storedHash === password;
+        // Fallback: try driverAccounts table
+        const driverAccount = await getDriverAccountByUsername(username);
+
+        if (!driverAccount) {
+          res.status(401).json({ error: "Identifiants incorrects" });
+          return;
+        }
+
+        if (!driverAccount.isActive) {
+          res.status(401).json({ error: "Compte désactivé" });
+          return;
+        }
+
+        const storedHash = driverAccount.passwordHash;
+        const passwordValid = storedHash === password;
+
+        if (!passwordValid) {
+          res.status(401).json({ error: "Identifiants incorrects" });
+          return;
+        }
+
+        openId = `driver:${driverAccount.id}`;
+        userName = driverAccount.username;
+        userRole = driverAccount.role === "admin" ? "admin" : "user";
+
+        await upsertUser({
+          openId,
+          name: driverAccount.username,
+          email: null,
+          loginMethod: "driver",
+          lastSignedIn: new Date(),
+          role: userRole,
+        });
       }
 
-      if (!passwordValid) {
-        res.status(401).json({ error: "Identifiants incorrects" });
-        return;
-      }
-
-      // Create a virtual openId for this driver account
-      // Format: "driver:{driverAccountId}" to distinguish from OAuth users
-      const openId = `driver:${driverAccount.id}`;
-
-      // Ensure user exists in the users table
-      await upsertUser({
-        openId,
-        name: driverAccount.username,
-        email: null,
-        loginMethod: "driver",
-        lastSignedIn: new Date(),
-        role: driverAccount.role === "admin" ? "admin" : "user",
-      });
-
-      // Get the user record (needed for the response)
+      // Get the user record
       const user = await getUserByOpenId(openId);
 
       // Create JWT session token
@@ -240,7 +251,7 @@ export function registerOAuthRoutes(app: Express) {
         {
           openId,
           appId: process.env.VITE_APP_ID ?? "sp-logistix",
-          name: driverAccount.username,
+          name: userName,
         },
         { expiresInMs: ONE_YEAR_MS },
       );
@@ -253,11 +264,11 @@ export function registerOAuthRoutes(app: Express) {
         success: true,
         token: sessionToken,
         user: {
-          id: user?.id ?? driverAccount.id,
+          id: user?.id ?? 0,
           openId,
-          username: driverAccount.username,
-          role: driverAccount.role,
-          name: driverAccount.username,
+          username: userName,
+          role: userRole,
+          name: userName,
         },
       });
     } catch (error) {

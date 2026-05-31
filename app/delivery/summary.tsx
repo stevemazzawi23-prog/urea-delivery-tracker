@@ -40,10 +40,8 @@ export default function DeliverySummaryScreen() {
     try {
       setPortalSyncStatus("syncing");
       
-      // 1. Essayer d'utiliser le code portail passé en paramètre (pour les clients du portail)
       let codeToUse = clientPortalCode;
       
-      // 2. Si pas de code en paramètre, chercher dans le stockage local
       if (!codeToUse) {
         const clients = await getClients();
         const client = clients.find((c) => c.id === clientId);

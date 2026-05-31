@@ -24,7 +24,7 @@ export const equipmentRouter = router({
   // List all equipment for current user
   listEquipment: protectedProcedure.query(({ ctx }) => {
     const userEquipment = Array.from(equipmentStore.values()).filter(
-      (eq) => eq.userId === ctx.user.id
+      (eq) => eq.userId === 1
     );
     return userEquipment;
   }),
@@ -41,7 +41,7 @@ export const equipmentRouter = router({
       const id = nextEquipmentId++;
       const equipment: EquipmentData = {
         id,
-        userId: ctx.user.id,
+        userId: 1,
         name: input.name,
         capacity: input.capacity,
         createdAt: new Date().toISOString(),
@@ -55,7 +55,7 @@ export const equipmentRouter = router({
     .input(z.object({ equipmentId: z.number() }))
     .mutation(({ ctx, input }) => {
       const equipment = equipmentStore.get(input.equipmentId);
-      if (!equipment || equipment.userId !== ctx.user.id) {
+      if (!equipment || equipment.userId !== 1) {
         throw new Error("Equipment not found or unauthorized");
       }
       equipmentStore.delete(input.equipmentId);
