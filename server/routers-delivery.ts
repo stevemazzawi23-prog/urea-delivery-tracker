@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
+import * as portal from "./db-portal";
 
 export const deliveryRouter = router({
   // Get all clients for current user
-  listClients: protectedProcedure.query(({ ctx }) => {
-    return db.getClientsByUser(1);
+  listClients: protectedProcedure.query(() => {
+    return portal.getPortalClients();
   }),
 
   // Get client by ID
@@ -102,15 +103,15 @@ export const deliveryRouter = router({
     }),
 
   // Get all deliveries for current user
-  listDeliveries: protectedProcedure.query(({ ctx }) => {
-    return db.getDeliveriesByUser(1);
+  listDeliveries: protectedProcedure.query(() => {
+    return portal.getPortalDeliveries();
   }),
 
   // Get delivery by ID with client info
   getDelivery: protectedProcedure
     .input(z.object({ deliveryId: z.number() }))
     .query(({ input }) => {
-      return db.getDeliveryWithClientInfo(input.deliveryId);
+      return portal.getPortalDeliveryById(input.deliveryId);
     }),
 
   // Create delivery
@@ -125,13 +126,11 @@ export const deliveryRouter = router({
       startTime: z.date(),
     }))
     .mutation(({ ctx, input }) => {
-      return db.createDelivery(1, {
+      return portal.createPortalDelivery({
         clientId: input.clientId,
         clientName: input.clientName,
-        clientCompany: input.clientCompany || null,
-        siteId: input.siteId || null,
         siteName: input.siteName || null,
-        driverName: input.driverName || null,
+        driverName: input.driverName || ctx.user?.name || null,
         startTime: input.startTime,
       });
     }),
@@ -146,11 +145,10 @@ export const deliveryRouter = router({
       photos: z.array(z.string()).optional(), // Array of photo URLs
     }))
     .mutation(({ input }) => {
-      return db.updateDelivery(input.deliveryId, {
+      return portal.updatePortalDelivery(input.deliveryId, {
         endTime: input.endTime,
         litersDelivered: input.litersDelivered,
         driverName: input.driverName,
-        photos: input.photos,
       });
     }),
 
@@ -158,7 +156,7 @@ export const deliveryRouter = router({
   deleteDelivery: protectedProcedure
     .input(z.object({ deliveryId: z.number() }))
     .mutation(({ input }) => {
-      return db.deleteDelivery(input.deliveryId);
+      return portal.deletePortalDelivery(input.deliveryId);
     }),
 
   // Send POD email
